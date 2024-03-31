@@ -47,14 +47,14 @@ STATIC_ASSERT(sizeof(b8)  == 1, "Expected b8 to be 1 byte");
 
 #ifdef FEXPORT
 #ifdef _MSC_VER
-#define FABRIC_API _declspec(dllexport)
+#define FB_API _declspec(dllexport)
 #else
-#define FABRIC_API __attribute__((visibility("default")))
+#define FB __attribute__((visibility("default")))
 #endif
 #else
 #ifdef _MSC_VER
-#define FABRIC_API _declspec(dllimport)
+#define FB_API _declspec(dllimport)
 #else
-#define FABRIC_API
+#define FB_API
 #endif
 #endif
