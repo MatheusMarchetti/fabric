@@ -11,7 +11,7 @@ FOR /R %%f in (*.cpp) do (
 REM echo "Files:" %cFilenames%
 
 SET assembly=launcher
-SET compilerFlags=-g 
+SET compilerFlags=-g -std=c++20
 REM -Wall -Werror
 SET includeFlags=-Isource -I../engine/source/
 SET linkerFlags=-L../bin/ -lcore.lib

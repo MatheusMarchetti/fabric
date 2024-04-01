@@ -13,15 +13,15 @@
 #define debugbreak() __builtin_trap()
 #endif
 
-namespace fabric {
-   FB_API void report_assertion_failure(const char* expression, const char* message, const char* file, i32 line);
+extern "C" {
+FB_API void report_assertion_failure(const char* expression, const char* message, const char* file, i32 line);
 }
 
 #define FBASSERT(expr)                                                       \
     {                                                                        \
         if (expr) {                                                          \
         } else {                                                             \
-            fabric::report_assertion_failure(#expr, "", __FILE__, __LINE__); \
+            report_assertion_failure(#expr, "", __FILE__, __LINE__);         \
             debugbreak();                                                    \
         }                                                                    \
     }
@@ -30,7 +30,7 @@ namespace fabric {
     {                                                                             \
         if (expr) {                                                               \
         } else {                                                                  \
-            fabric::report_assertion_failure(#expr, message, __FILE__, __LINE__); \
+            report_assertion_failure(#expr, message, __FILE__, __LINE__);         \
             debugbreak();                                                         \
         }                                                                         \
     }
@@ -40,7 +40,7 @@ namespace fabric {
     {                                                                        \
         if (expr) {                                                          \
         } else {                                                             \
-            fabric::report_assertion_failure(#expr, "", __FILE__, __LINE__); \
+            report_assertion_failure(#expr, "", __FILE__, __LINE__);         \
             debugbreak();                                                    \
         }                                                                    \
     }

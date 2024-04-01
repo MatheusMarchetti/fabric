@@ -54,7 +54,11 @@
         "type_traits": "c",
         "typeinfo": "c",
         "windowsx.h": "c",
-        "renderer_frontend.h": "c"
+        "renderer_frontend.h": "c",
+        "iosfwd": "cpp",
+        "xlocbuf": "cpp",
+        "ios": "cpp",
+        "xiosbase": "cpp"
     },
     "cmake.configureOnOpen": false
 }

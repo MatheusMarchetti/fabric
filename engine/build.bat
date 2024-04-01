@@ -11,11 +11,11 @@ FOR /R %%f in (*.cpp) do (
 REM echo "Files:" %cFilenames%
 
 SET assembly=core
-SET compilerFlags=-g -shared -Wvarargs -Wall -Werror
+SET compilerFlags=-g -shared -Wvarargs -Wall -Werror -std=c++20
 REM -Wall -Werror
 SET includeFlags=-Isource
 SET linkerFlags=-luser32
-SET defines=-D_DEBUG -DFEXPORT -D_CRT_SECURE_NO_WARNINGS
+SET defines=-D_DEBUG -DFBEXPORT -D_CRT_SECURE_NO_WARNINGS
 
 ECHO "Building %assembly%%..."
 clang %cFilenames% %compilerFlags% -o ../bin/%assembly%.dll %defines% %includeFlags% %linkerFlags%
