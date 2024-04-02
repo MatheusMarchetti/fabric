@@ -25,7 +25,7 @@ namespace {
 
 LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam);
 
-b8 initialize(fabric::platform::state* platformState, const char* applicationName, i32 x, i32 y, i32 width, i32 height) {
+b8 platform::initialize(fabric::platform::state* platformState, const char* applicationName, i32 x, i32 y, i32 width, i32 height) {
     platformState->internal_state = malloc(sizeof(internal_state));
     internal_state* internal = (internal_state*)platformState->internal_state;
 
@@ -90,7 +90,7 @@ b8 initialize(fabric::platform::state* platformState, const char* applicationNam
     return true;
 }
 
-void shutdown(fabric::platform::state* platformState) {
+void platform::terminate(fabric::platform::state* platformState) {
     internal_state* internal = (internal_state*)platformState->internal_state;
 
     if (internal->hwnd) {
@@ -99,7 +99,7 @@ void shutdown(fabric::platform::state* platformState) {
     }
 }
 
-b8 pump_messages(fabric::platform::state* platformState) {
+b8 platform::update(fabric::platform::state* platformState) {
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&message);

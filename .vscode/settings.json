@@ -58,7 +58,20 @@
         "iosfwd": "cpp",
         "xlocbuf": "cpp",
         "ios": "cpp",
-        "xiosbase": "cpp"
+        "xiosbase": "cpp",
+        "system_error": "cpp",
+        "xlocale": "cpp",
+        "atomic": "cpp",
+        "charconv": "cpp",
+        "locale": "cpp",
+        "memory": "cpp",
+        "streambuf": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp"
     },
     "cmake.configureOnOpen": false
 }

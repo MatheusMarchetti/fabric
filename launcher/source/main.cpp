@@ -1,23 +1,17 @@
-#include <core/logger.hpp>
-#include <core/asserts.hpp>
-#include <platform/platform.hpp>
+#include <fabric.hpp>
+#include <entry_point.hpp>
 
-using namespace fabric;
+#include "launcher.hpp"
 
-int main() {
-    FBFATAL("A test message: %f", 3.14f);
-    FBERROR("A test message: %f", 3.14f);
-    FBWARN("A test message: %f", 3.14f);
-    FBINFO("A test message: %f", 3.14f);
-    FBDEBUG("A test message: %f", 3.14f);
-
-    platform::state state;
-    if (initialize(&state, "Fabric Engine Launcher", 100, 100, 1280, 720)) {
-        while (true) {
-            pump_messages(&state);
-        }
-    }
-    shutdown(&state);
-
-    return 0;
+void create_application(application& app) {
+    app.config = {
+        .name = "Fabric Launcher",
+        .posX = 100,
+        .posY = 100,
+        .client_width = 1280,
+        .client_height = 720};
+    
+    app.initialize = initialize;
+    app.begin_frame = begin_frame;
+    app.terminate = terminate;
 }

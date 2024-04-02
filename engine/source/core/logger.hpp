@@ -21,30 +21,30 @@ namespace fabric::logger {
     };
 
     b8 initialize();
-    void shutdown();
+    void terminate();
+
+    extern "C" {
+    FB_API void log_output(fabric::logger::log_level level, const char* message, ...);
+    }
 }  // namespace fabric::logger
 
-extern "C" {
-FB_API void log_output(fabric::logger::log_level level, const char* message, ...);
-}
-
-#define FBFATAL(message, ...) log_output(fabric::logger::LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
-#define FBERROR(message, ...) log_output(fabric::logger::LOG_LEVEL_ERROR, message, ##__VA_ARGS__);
+#define FBFATAL(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
+#define FBERROR(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_ERROR, message, ##__VA_ARGS__);
 
 #if LOG_WARN_ENABLED == 1
-#define FBWARN(message, ...) log_output(fabric::logger::LOG_LEVEL_WARN, message, ##__VA_ARGS__);
+#define FBWARN(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_WARN, message, ##__VA_ARGS__);
 #else
 #define FBWARN(message, ...)
 #endif
 
 #if LOG_INFO_ENABLED == 1
-#define FBINFO(message, ...) log_output(fabric::logger::LOG_LEVEL_INFO, message, ##__VA_ARGS__);
+#define FBINFO(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_INFO, message, ##__VA_ARGS__);
 #else
 #define FBINFO(message, ...)
 #endif
 
 #if LOG_DEBUG_ENABLED == 1
-#define FBDEBUG(message, ...) log_output(fabric::logger::LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
+#define FBDEBUG(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
 #else
 #define FBDEBUG(message, ...)
 #endif
