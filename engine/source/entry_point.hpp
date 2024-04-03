@@ -1,8 +1,6 @@
 #pragma once
 
-extern "C" {
-    void create_application(application&);
-}
+extern void create_application(application&);
 
 int main() {
     application app;
@@ -23,6 +21,6 @@ int main() {
 
 termination:
     fabric::terminate(app);
-
+    
     return 0;
 }

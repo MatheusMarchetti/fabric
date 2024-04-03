@@ -11,7 +11,7 @@ void create_application(application& app) {
         .client_width = 1280,
         .client_height = 720};
     
-    app.initialize = initialize;
+    app.initialize = launcher_initialize;
     app.begin_frame = begin_frame;
-    app.terminate = terminate;
+    app.terminate = launcher_terminate;
 }

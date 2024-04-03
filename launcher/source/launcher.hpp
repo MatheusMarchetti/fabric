@@ -2,6 +2,6 @@
 
 #include <fabric.hpp>
 
-bool initialize();
+bool launcher_initialize();
 bool begin_frame(double timestep);
-void terminate();
+void launcher_terminate();

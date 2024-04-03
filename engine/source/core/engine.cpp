@@ -1,6 +1,7 @@
 #include "core/application.hpp"
 #include "core/engine.hpp"
 #include "core/logger.hpp"
+#include "core/memory.hpp"
 #include "platform/platform.hpp"
 
 using namespace fabric;
@@ -31,6 +32,7 @@ namespace fabric {
         height = app.config.client_height;
         current_state = application_state::running;
 
+        memory::initialize();
         logger::initialize();
 
         if (!platform::initialize(&platform_state, app.config.name, app.config.posX, app.config.posY, width, height)) {
@@ -101,6 +103,7 @@ namespace fabric {
             // TODO: terminate all subsystems before logger, except platform
 
             logger::terminate();
+            memory::terminate();
 
             platform::terminate(&platform_state);
         } else {
