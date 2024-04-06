@@ -36,6 +36,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes");
 
 STATIC_ASSERT(sizeof(b8)  == 1, "Expected b8 to be 1 byte");
 
+static constexpr u64 invalid_u64 = -1ULL;
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #define FBPLATFORM_WINDOWS 1
 #ifndef _WIN64

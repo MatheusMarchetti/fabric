@@ -1,5 +1,6 @@
 #include "core/application.hpp"
 #include "core/engine.hpp"
+#include "core/event.hpp"
 #include "core/logger.hpp"
 #include "core/memory.hpp"
 #include "platform/platform.hpp"
@@ -34,6 +35,12 @@ namespace fabric {
 
         memory::initialize();
         logger::initialize();
+
+        if(!event::initialize()) {
+            FBERROR("An error ocurred during event initialization.");
+            current_state = application_state::terminating;
+            return false;
+        }
 
         if (!platform::initialize(&platform_state, app.config.name, app.config.posX, app.config.posY, width, height)) {
             FBERROR("An error ocurred during platform initialization.");
@@ -104,7 +111,7 @@ namespace fabric {
 
             logger::terminate();
             memory::terminate();
-
+            event::terminate();
             platform::terminate(&platform_state);
         } else {
             FBFATAL("How the hell did we end up here?!");

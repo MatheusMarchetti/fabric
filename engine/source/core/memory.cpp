@@ -8,24 +8,6 @@
 
 using namespace fabric;
 
-void* operator new(u64 size) {
-    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
-}
-
-void operator delete(void* block) noexcept {
-    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
-    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
-}
-
-void* operator new[](u64 size) {
-    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
-}
-
-void operator delete[](void* block) noexcept {
-    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
-    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
-}
-
 namespace {
     struct memory_stats {
         u64 total_allocated;
@@ -132,4 +114,22 @@ void memory::log_memory_usage() {
     }
 
     FBINFO(buffer);
+}
+
+void* operator new(u64 size) {
+    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
+}
+
+void operator delete(void* block) noexcept {
+    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
+    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
+}
+
+void* operator new[](u64 size) {
+    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
+}
+
+void operator delete[](void* block) noexcept {
+    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
+    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
 }

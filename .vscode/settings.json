@@ -71,7 +71,10 @@
         "xlocnum": "cpp",
         "xloctime": "cpp",
         "xmemory": "cpp",
-        "xstring": "cpp"
+        "xstring": "cpp",
+        "vector": "cpp",
+        "xutility": "cpp",
+        "xlocinfo": "cpp"
     },
     "cmake.configureOnOpen": false
 }

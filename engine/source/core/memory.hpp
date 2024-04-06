@@ -25,7 +25,7 @@ namespace fabric::memory {
     b8 initialize();
     void terminate();
 
-    FB_API void* fballocate(u64 size, memory_tag tag = MEMORY_TAG_UNKNOWN);
+    FB_API void* fballocate(u64 size, memory_tag tag);
     FB_API void fbfree(void* block, u64 size, memory_tag tag);
     FB_API void* fbzero(void* block, u64 size);
     FB_API void* fbcopy(void* dst, const void* src, u64 size);
