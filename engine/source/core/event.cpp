@@ -5,10 +5,10 @@
 
 using namespace fabric;
 
-namespace {
+namespace internal {
     struct registered_event {
         void* listener;
-        event::on_event_pfn callback;
+        on_event_pfn callback;
     };
 
     struct event_code_entry {
@@ -25,69 +25,74 @@ namespace {
 }  // namespace
 
 b8 event::initialize() {
-    if (is_initialized) {
+    if (internal::is_initialized) {
         FBERROR("Event system was already initialized!");
         return false;
     }
 
-    memory::fbzero(entries, sizeof(event_code_entry) * max_message_codes);
+    memory::fbzero(internal::entries, sizeof(internal::entries));
 
-    return is_initialized = true;
+    FBINFO("Event system initialized.");
+
+    return internal::is_initialized = true;
 }
 
 void event::terminate() {
-    for (u16 i = 0; i < max_message_codes; i++) {
-        if (entries[i] && !entries[i]->events.empty()) {
-            entries[i]->events.clear();
+    for (u16 i = 0; i < internal::max_message_codes; i++) {
+        if (internal::entries[i] && !internal::entries[i]->events.empty()) {
+            internal::entries[i]->events.clear();
 
-            memory::fbfree(entries[i], sizeof(event_code_entry), memory::MEMORY_TAG_APPLICATION);
+            memory::fbfree(internal::entries[i], sizeof(internal::event_code_entry*), memory::MEMORY_TAG_APPLICATION);
         }
     }
+
+    internal::is_initialized = false;
 }
 
 b8 event::checkin(u16 code, void* listener, on_event_pfn on_event) {
-    if (!is_initialized) {
+    if (!internal::is_initialized) {
         FBERROR("Trying to register an event before the event system was initialized.");
         return false;
     }
 
-    if(entries[code] == 0) {
-        entries[code] = (event_code_entry*)memory::fballocate(sizeof(event_code_entry), memory::MEMORY_TAG_APPLICATION);
+    if(internal::entries[code] == 0) {
+        internal::entries[code] = (internal::event_code_entry*)memory::fballocate(sizeof(internal::event_code_entry*), memory::MEMORY_TAG_APPLICATION);
+        internal::entries[code]->events = ftl::darray<internal::registered_event>();
     }
 
-    u64 registered_count = entries[code]->events.length();
+    u64 registered_count = internal::entries[code]->events.length();
 
     for (u64 i = 0; i < registered_count; i++) {
-        if (entries[code]->events[i].listener == listener) {
+        if (internal::entries[code]->events[i].listener == listener) {
             FBWARN("Trying to register the same listener again. Nothing will be done.");
             return false;
         }
     }
 
-    registered_event event;
+    internal::registered_event event;
     event.listener = listener;
     event.callback = on_event;
-    entries[code]->events.push(event);
+    internal::entries[code]->events.push(event);
 
     return true;
 }
 
-b8 event::checkout(u16 code, void* listener, event::on_event_pfn on_event) {
-    if (!is_initialized) {
+b8 event::checkout(u16 code, void* listener, on_event_pfn on_event) {
+    if (!internal::is_initialized) {
         FBERROR("Trying to unregister an event before the event system was initialized.");
         return false;
     }
 
-    if (!entries[code]) {
+    if (!internal::entries[code]) {
         FBWARN("Trying to unregister an event that was not registered before. Nothing will be done.");
         return false;
     }
 
-    u64 registered_count = entries[code]->events.length();
+    u64 registered_count = internal::entries[code]->events.length();
     for (u64 i = 0; i < registered_count; i++) {
-        registered_event e = entries[code]->events[i];
-        if (e.listener == listener&& e.callback == on_event) {
-            entries[code]->events.pop(i);
+        internal::registered_event& e = internal::entries[code]->events[i];
+        if (e.listener == listener && e.callback == on_event) {
+            internal::entries[code]->events.pop(i);
             return true;
         }
     }
@@ -97,19 +102,18 @@ b8 event::checkout(u16 code, void* listener, event::on_event_pfn on_event) {
 }
 
 b8 event::send(u16 code, void* sender, event::context eventContext) {
-    if (!is_initialized) {
+    if (!internal::is_initialized) {
         FBERROR("Trying to send an event before the event system was initialized.");
         return false;
     }
 
-    if (!entries[code] || entries[code]->events.empty()) {
-        FBWARN("No events matching this code were found. Nothing will be done.");
+    if (!internal::entries[code] || internal::entries[code]->events.empty()) {
         return false;
     }
 
-    u64 registered_count = entries[code]->events.length();
+    u64 registered_count = internal::entries[code]->events.length();
     for (u64 i = 0; i < registered_count; i++) {
-        registered_event e = entries[code]->events[i];
+        internal::registered_event& e = internal::entries[code]->events[i];
         if (e.callback(code, sender, e.listener, eventContext)) {
             // Message was handled, stop dispatching
             return true;

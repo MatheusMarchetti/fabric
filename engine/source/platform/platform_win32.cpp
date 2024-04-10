@@ -2,6 +2,7 @@
 
 #if FBPLATFORM_WINDOWS
 
+#include "core/input.hpp"
 #include "core/logger.hpp"
 
 #define WIN32_LEAN_AND_MEAN
@@ -188,26 +189,27 @@ LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM
         case WM_SYSKEYDOWN:
         case WM_KEYUP:
         case WM_SYSKEYUP: {
-            // b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            input::keys key = (input::keys)wParam;
 
-            // TODO: input processing.
+            input::process_key(key, pressed);
         } break;
 
         case WM_MOUSEMOVE: {
-            // i32 xPosition = GET_X_LPARAM(lParam);
-            // i32 yPosition = GET_Y_LPARAM(lParam);
+            i16 xPosition = GET_X_LPARAM(lParam);
+            i16 yPosition = GET_Y_LPARAM(lParam);
 
-            // TODO: input processing.
+            input::process_mouse_move(xPosition, yPosition);
         } break;
 
         case WM_MOUSEWHEEL: {
-            // i32 wheel_delta = GET_WHEEL_DELTA_WPARAM(wParam);
+            i32 wheel_delta = GET_WHEEL_DELTA_WPARAM(wParam);
 
-            // if(wheel_delta != 0) {
-            //     wheel_delta = (wheel_delta < 0) ? -1 : 1;
-            // }
+            if (wheel_delta != 0) {
+                wheel_delta = (wheel_delta < 0) ? -1 : 1;
 
-            // TODO: input processing.
+                input::process_mouse_wheel(wheel_delta);
+            }
         } break;
 
         case WM_LBUTTONDOWN:
@@ -216,9 +218,28 @@ LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM
         case WM_RBUTTONUP:
         case WM_MBUTTONDOWN:
         case WM_MBUTTONUP: {
-            // b8 pressed = (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg = WM_MBUTTONDOWN);
+            b8 pressed = (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN);
 
-            // TODO: input processing.
+            input::buttons button = input::BUTTON_MAX_COUNT;
+
+            switch (msg) {
+                case WM_LBUTTONDOWN:
+                case WM_LBUTTONUP:
+                    button = input::BUTTON_LEFT;
+                    break;
+                case WM_RBUTTONDOWN:
+                case WM_RBUTTONUP:
+                    button = input::BUTTON_RIGHT;
+                    break;
+                case WM_MBUTTONDOWN:
+                case WM_MBUTTONUP:
+                    button = input::BUTTON_MIDDLE;
+                    break;
+            }
+
+            if (button != input::BUTTON_MAX_COUNT) {
+                input::process_button(button, pressed);
+            }
         } break;
     }
 

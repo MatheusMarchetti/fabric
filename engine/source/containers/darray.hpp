@@ -17,7 +17,7 @@ namespace fabric::ftl {
         memory_layout* darray_copy(memory_layout* original, u64 stride);
 
         memory_layout* darray_resize(memory_layout* current, u64 stride);
-        void darray_push(memory_layout* current, u64 stride, u64 index, void* valuePtr);
+        void* darray_push(memory_layout* current, u64 stride, u64 index, void* valuePtr);
         void darray_pop(memory_layout* current, u64 stride, u64 index);
     }  // namespace internal
 
@@ -56,9 +56,7 @@ namespace fabric::ftl {
         }
 
         const T& push(const T& value, u64 index = end_of_array) {
-            internal::darray_push(memory, sizeof(T), index, (void*)(&value));
-
-            return value;
+            return *(T*)internal::darray_push(memory, sizeof(T), index, (void*)(&value));
         }
 
         void pop(u64 index = end_of_array) {

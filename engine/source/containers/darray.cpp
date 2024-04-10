@@ -13,8 +13,11 @@ namespace {
 internal::memory_layout* internal::darray_create(u64 capacity, u64 stride) {
     u64 array_size = capacity * stride;
     internal::memory_layout* new_array = (internal::memory_layout*)memory::fballocate(header_size + array_size, memory::MEMORY_TAG_DARRAY);
+    u64* elements_array = (u64*)new_array;
+    elements_array += header_size / sizeof(u64);
     new_array->capacity = capacity;
     new_array->length = 0;
+    new_array->elements = (void*)(elements_array);
 
     return new_array;
 }
@@ -25,9 +28,10 @@ void internal::darray_destroy(internal::memory_layout* memory, u64 stride) {
 }
 
 internal::memory_layout* internal::darray_copy(internal::memory_layout* original, u64 stride) {
-    u64 total_size = header_size + original->capacity * stride;
     internal::memory_layout* new_array = internal::darray_create(original->capacity, stride);
-    memory::fbcopy(new_array, original, total_size);
+    new_array->capacity = original->capacity;
+    new_array->length = original->length;
+    new_array->elements = memory::fbcopy(new_array->elements, original->elements, original->length * stride);
 
     return new_array;
 }
@@ -44,14 +48,14 @@ internal::memory_layout* internal::darray_resize(internal::memory_layout* curren
     return temp;
 }
 
-void internal::darray_push(internal::memory_layout* current, u64 stride, u64 index, void* valuePtr) {
+void* internal::darray_push(internal::memory_layout* current, u64 stride, u64 index, void* valuePtr) {
     if (index != invalid_u64 && index >= current->length) {
         FBERROR("Index outside of the bounds of this array! Length: %i, index: %i", current->length, index);
-        return;
+        return nullptr;
     }
 
     if (index == invalid_u64) {
-        index = current->length - 1;
+        index = current->length == 0 ? current->length : current->length - 1;
     }
 
     if (current->length >= current->capacity) {
@@ -60,12 +64,14 @@ void internal::darray_push(internal::memory_layout* current, u64 stride, u64 ind
 
     u64 address = (u64)current->elements;
 
-    if (index != current->length - 1) {
+    if (current->length != 0 && index != current->length - 1) {
         memory::fbcopy((void*)(address + ((index + 1) * stride)), (void*)(address + (index * stride)), stride * (current->length - index));
     }
 
-    memory::fbcopy((void*)(address + (index * stride)), valuePtr, stride);
+    current->elements = memory::fbcopy((void*)(address + (index * stride)), valuePtr, stride);
     current->length++;
+
+    return valuePtr;
 }
 
 void internal::darray_pop(internal::memory_layout* current, u64 stride, u64 index) {

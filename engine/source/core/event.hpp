@@ -20,7 +20,7 @@ namespace fabric::event {
             u8 u8[16];
 
             char c[16];
-        };
+        } data;
     };
 
     // The first 255 codes are reserved for internal use.
@@ -74,10 +74,12 @@ namespace fabric::event {
 
         MAX_CODES = 0xFF
     };
+}  // namespace fabric::event
 
-    // Returns true if event was handled
-    typedef b8 (*on_event_pfn)(u16 code, void* sender, void* listenerInst, fabric::event::context data);
+// Returns true if event was handled
+typedef b8 (*on_event_pfn)(u16 code, void* sender, void* listenerInst, fabric::event::context data);
 
+namespace fabric::event {
     b8 initialize();
     void terminate();
 
@@ -85,4 +87,4 @@ namespace fabric::event {
     FB_API b8 checkout(u16 code, void* listener, on_event_pfn on_event);
     FB_API b8 send(u16 code, void* sender, context eventContext);
 
-}
+}  // namespace fabric::event

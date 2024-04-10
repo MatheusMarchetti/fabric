@@ -32,15 +32,24 @@ namespace {
         "OP_NEW     "};
 
     static memory_stats statistics;
+
+    b8 is_initialized = false;
 }  // namespace
 
 b8 memory::initialize() {
+    if (is_initialized) {
+        FBERROR("Memory system was already initialized!");
+        return false;
+    }
     platform::zero_memory(&statistics, sizeof(memory_stats));
 
-    return true;
+    FBINFO("Memory system initialized.");
+
+    return is_initialized = true;
 }
 
 void memory::terminate() {
+    is_initialized = false;
 }
 
 void* memory::fballocate(u64 size, memory::memory_tag tag) {
@@ -121,7 +130,7 @@ void* operator new(u64 size) {
 }
 
 void operator delete(void* block) noexcept {
-    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
+    // NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
     memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
 }
 
@@ -130,6 +139,6 @@ void* operator new[](u64 size) {
 }
 
 void operator delete[](void* block) noexcept {
-    //NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
+    // NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
     memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
 }
