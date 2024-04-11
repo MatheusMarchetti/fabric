@@ -53,7 +53,6 @@ namespace fabric {
 
         event::checkin(event::APPLICATION_QUIT, 0, on_event);
         event::checkin(event::KEY_PRESSED, 0, on_key);
-        event::checkin(event::KEY_RELEASED, 0, on_key);
 
         if (!input::initialize()) {
             FBERROR("An error ocurred during input system initialization.");
@@ -130,7 +129,6 @@ namespace fabric {
 
             event::checkout(event::APPLICATION_QUIT, 0, on_event);
             event::checkout(event::KEY_PRESSED, 0, on_key);
-            event::checkout(event::KEY_RELEASED, 0, on_key);
 
             input::terminate();
             event::terminate();
@@ -161,12 +159,6 @@ b8 on_key(u16 code, void* sender, void* listener_inst, event::context context) {
             event::context data = {};
             event::send(event::APPLICATION_QUIT, nullptr, data);
 
-            return true;
-        } else if (key == input::KEY_A) {
-            FBDEBUG("Explicit - A key pressed");
-            return true;
-        } else {
-            FBDEBUG("'%c' key pressed in window.", key);
             return true;
         }
     }

@@ -42,6 +42,17 @@ namespace fabric::ftl {
             return *this;
         }
 
+        darray<T>& operator=(internal::memory_layout* m) {
+            this->memory = m;
+
+            return *this;
+        }
+
+        T& operator[](u64 index) {
+            T* elements = (T*)memory->elements;
+            return elements[index];
+        }
+
         u64 capacity() const { return memory->capacity; }
         u64 length() const { return memory->length; }
         u64 stride() const { return sizeof(T); }
@@ -65,9 +76,14 @@ namespace fabric::ftl {
 
         void clear() const { memory->length = 0; }
 
-        T& operator[](u64 index) {
-            T* elements = (T*)memory->elements;
-            return elements[index];
+        T* data() { return (T*)memory->elements; }
+
+        static internal::memory_layout* create(u64 capacity = default_capacity) {
+            return internal::darray_create(capacity, sizeof(T));
+        }
+
+        static void destroy(const darray<T>& array) {
+            internal::darray_destroy(array.memory, sizeof(T));
         }
 
        private:
