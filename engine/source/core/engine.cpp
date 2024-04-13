@@ -1,4 +1,5 @@
 #include "core/application.hpp"
+#include "core/clock.hpp"
 #include "core/engine.hpp"
 #include "core/event.hpp"
 #include "core/input.hpp"
@@ -74,13 +75,16 @@ namespace fabric {
             }
         }
 
-        last_time = platform::get_absolute_time();
-
         FBINFO("Fabric engine initialization successful.");
         return is_initialized = true;
     }
 
     b8 update(application& app) {
+        ftl::stopwatch clock;
+        last_time = clock.mark();
+        // f64 running_time = 0.0;
+        f64 target_frame_seconds = 1.0 / 60.0;
+
         while (current_state != application_state::terminating) {
             if (!platform::update(&platform_state)) {
                 FBERROR("An error ocurred during platform update.");
@@ -88,13 +92,13 @@ namespace fabric {
                 return false;
             }
 
-            f64 time_now = platform::get_absolute_time();
-            f64 timestep = time_now - last_time;
-            last_time = time_now;
-
             if (current_state == application_state::running) {
+                f64 current_time = clock.mark();
+                f64 delta = (current_time - last_time);
+                f64 frame_start_time = platform::get_absolute_time();
+
                 if (app.begin_frame) {
-                    if (!app.begin_frame(timestep)) {
+                    if (!app.begin_frame(delta)) {
                         FBERROR("An error ocurred during application frame start.");
                         current_state = application_state::terminating;
                         return false;
@@ -104,7 +108,7 @@ namespace fabric {
                 // TODO: Process internal frame logic
 
                 if (app.end_frame) {
-                    if (!app.end_frame(timestep)) {
+                    if (!app.end_frame(delta)) {
                         FBERROR("An error ocurred during application frame end.");
                         current_state = application_state::terminating;
                         return false;
@@ -114,7 +118,22 @@ namespace fabric {
                 // NOTE: As far as the application is concerned, a "frame" is the logic update phase. A frame for the renderer is not related to this.
                 // TODO: Start rendering
 
-                input::update(timestep);
+                f64 frame_end_time = platform::get_absolute_time();
+                f64 frame_elapsed_time = frame_end_time - frame_start_time;
+                // running_time += frame_elapsed_time;
+                f64 remaining_seconds = target_frame_seconds - frame_elapsed_time;
+
+                if(remaining_seconds > 0.0) {
+                    u64 remaining_millis = (remaining_seconds * 1000);
+
+                    if(remaining_millis > 0) {
+                        platform::sleep(remaining_millis - 1);
+                    }
+                }
+
+                input::update(delta);
+
+                last_time = current_time;
             }
         }
 

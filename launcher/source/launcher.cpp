@@ -4,6 +4,8 @@ using namespace fabric;
 
 bool launcher_initialize() {
     FBDEBUG("Initializing launcher application");
+
+    memory::log_memory_usage();
     return true;
 }
 
