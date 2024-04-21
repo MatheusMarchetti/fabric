@@ -104,7 +104,11 @@
         "thread": "cpp",
         "tuple": "cpp",
         "unordered_map": "cpp",
-        "xfacet": "cpp"
+        "xfacet": "cpp",
+        "array": "cpp",
+        "ranges": "cpp",
+        "ratio": "cpp",
+        "xtr1common": "cpp"
     },
     "cmake.configureOnOpen": false
 }
