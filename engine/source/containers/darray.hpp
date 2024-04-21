@@ -24,26 +24,28 @@ namespace fabric::ftl {
     template <typename T>
     class FB_API darray {
        public:
-        darray(u64 capacity = default_capacity) {
+        darray() : memory(nullptr) {}
+
+        darray(u64 capacity) {
             memory = internal::darray_create(capacity, sizeof(T));
         }
 
         ~darray() {
-            internal::darray_destroy(memory, sizeof(T));
+            if (memory) {
+                internal::darray_destroy(memory, sizeof(T));
+            }
         }
 
         darray(const darray<T>& other) {
-            this->memory = internal::darray_copy(other.memory, sizeof(T));
+            if (other.memory) {
+                this->memory = internal::darray_copy(other.memory, sizeof(T));
+            }
         }
 
         darray<T>& operator=(const darray<T>& other) {
-            this->memory = internal::darray_copy(other.memory, sizeof(T));
-
-            return *this;
-        }
-
-        darray<T>& operator=(internal::memory_layout* m) {
-            this->memory = m;
+            if (other.memory) {
+                this->memory = internal::darray_copy(other.memory, sizeof(T));
+            }
 
             return *this;
         }
@@ -53,10 +55,22 @@ namespace fabric::ftl {
             return elements[index];
         }
 
-        u64 capacity() const { return memory->capacity; }
-        u64 length() const { return memory->length; }
+        u64 capacity() const {
+            if (!memory) {
+                return 0;
+            }
+            return memory->capacity;
+        }
+        u64 length() const {
+            if (!memory) {
+                return 0;
+            }
+            return memory->length;
+        }
         u64 stride() const { return sizeof(T); }
-        b8 empty() const { return memory->length == 0; }
+        b8 empty() const {
+            return (!memory || memory->length == 0);
+        }
 
         void reserve(u64 newCapacity) {
             memory = internal::darray_create(newCapacity, sizeof(T));
@@ -67,6 +81,9 @@ namespace fabric::ftl {
         }
 
         const T& push(const T& value, u64 index = end_of_array) {
+            if (!memory) {
+                reserve(1);
+            }
             return *(T*)internal::darray_push(memory, sizeof(T), index, (void*)(&value));
         }
 
@@ -74,17 +91,14 @@ namespace fabric::ftl {
             internal::darray_pop(memory, sizeof(T), index);
         }
 
-        void clear() const { memory->length = 0; }
+        void clear() const {
+            if (!memory) {
+                return;
+            }
+            memory->length = 0;
+        }
 
         T* data() { return (T*)memory->elements; }
-
-        static internal::memory_layout* create(u64 capacity = default_capacity) {
-            return internal::darray_create(capacity, sizeof(T));
-        }
-
-        static void destroy(const darray<T>& array) {
-            internal::darray_destroy(array.memory, sizeof(T));
-        }
 
        private:
         internal::memory_layout* memory;
