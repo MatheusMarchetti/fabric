@@ -4,6 +4,7 @@
 
 #include "core/input.hpp"
 #include "core/logger.hpp"
+#include "core/event.hpp"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -26,9 +27,9 @@ namespace {
 
 LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam);
 
-b8 platform::initialize(fabric::platform::state* platformState, const char* applicationName, i32 x, i32 y, i32 width, i32 height) {
-    platformState->internal_state = malloc(sizeof(internal_state));
-    internal_state* internal = (internal_state*)platformState->internal_state;
+b8 platform::initialize(fabric::platform::window& platformState) {
+    platformState.internal_state = malloc(sizeof(internal_state));
+    internal_state* internal = (internal_state*)platformState.internal_state;
 
     internal->hinstance = GetModuleHandleA(0);
 
@@ -48,10 +49,10 @@ b8 platform::initialize(fabric::platform::state* platformState, const char* appl
         return false;
     }
 
-    u32 windowX = x;
-    u32 windowY = y;
-    u32 window_width = width;
-    u32 window_height = height;
+    u32 windowX = platformState.x;
+    u32 windowY = platformState.y;
+    u32 window_width = platformState.width;
+    u32 window_height = platformState.height;
 
     u32 window_style = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
     u32 extended_window_style = WS_EX_APPWINDOW;
@@ -68,7 +69,7 @@ b8 platform::initialize(fabric::platform::state* platformState, const char* appl
     window_width += border_rect.right - border_rect.left;
     window_height += border_rect.bottom - border_rect.top;
 
-    HWND handle = CreateWindowExA(extended_window_style, wc.lpszClassName, applicationName, window_style,
+    HWND handle = CreateWindowExA(extended_window_style, wc.lpszClassName, platformState.name, window_style,
                                   windowX, windowY, window_width, window_height, 0, 0, internal->hinstance, 0);
 
     if (!handle) {
@@ -91,8 +92,8 @@ b8 platform::initialize(fabric::platform::state* platformState, const char* appl
     return true;
 }
 
-void platform::terminate(fabric::platform::state* platformState) {
-    internal_state* internal = (internal_state*)platformState->internal_state;
+void platform::terminate(fabric::platform::window& platformState) {
+    internal_state* internal = (internal_state*)platformState.internal_state;
 
     if (internal->hwnd) {
         DestroyWindow(internal->hwnd);
@@ -100,7 +101,7 @@ void platform::terminate(fabric::platform::state* platformState) {
     }
 }
 
-b8 platform::update(fabric::platform::state* platformState) {
+b8 platform::update(fabric::platform::window& platformState) {
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&message);
@@ -167,22 +168,26 @@ LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM
             // Notify the OS that erasing the screen will be handled by the application to prevent flicker.
             return 1;
 
-        case WM_CLOSE:
-            // TODO: Fire an event for the application to quit.
+        case WM_CLOSE: {
+            event::context data = {};
+            event::send(event::APPLICATION_QUIT, nullptr, data);
             return 0;
+        }
 
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
 
         case WM_SIZE: {
-            // Get the updated size
-            // RECT rect;
-            // GetClientRect(hWnd, &rect);
-            // u32 width = rect.right - rect.left;
-            // u32 height = rect.bottom - rect.top;
+            RECT rect;
+            GetClientRect(hWnd, &rect);
+            u32 width = rect.right - rect.left;
+            u32 height = rect.bottom - rect.top;
+            event::context context;
+            context.data.u16[0] = (u16)width;
+            context.data.u16[1] = (u16)height;
 
-            // TODO: Fire an event for window resize.
+            event::send(event::RESIZED, nullptr, context);
         } break;
 
         case WM_KEYDOWN:

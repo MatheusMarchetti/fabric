@@ -3,13 +3,18 @@
 #include "defines.hpp"
 
 namespace fabric::platform {
-    struct state {
+    struct window {
+        const char* name;
+        i16 x;
+        i16 y;
+        u16 width;
+        u16 height;
         void* internal_state;
     };
-    b8 initialize(fabric::platform::state* platformState, const char* applicationName, i32 x, i32 y, i32 width, i32 height);
-    void terminate(fabric::platform::state* platformState);
+    b8 initialize(fabric::platform::window& platformState);
+    void terminate(fabric::platform::window& platformState);
 
-    b8 update(fabric::platform::state* platformState);
+    b8 update(fabric::platform::window& platformState);
 
     void* allocate_memory(u64 size, b8 aligned);
     void free_memory(void* block, b8 aligned);
