@@ -2,106 +2,103 @@
 
 #include "defines.hpp"
 
-namespace fabric::ftl {
+namespace ftl {
     namespace internal {
-        struct memory_layout {
-            u64 capacity;
-            u64 length;
-            void* elements;
+        void* darray_create(u64 capacity, u64 stride);
+        void darray_destroy(void* memory, u64 stride);
+        void* darray_copy(void* original, u64 stride);
 
-            static constexpr u64 header_size = 2 * sizeof(u64);
-        };
-
-        memory_layout* darray_create(u64 capacity, u64 stride);
-        void darray_destroy(memory_layout* memory, u64 stride);
-        memory_layout* darray_copy(memory_layout* original, u64 stride);
-
-        memory_layout* darray_resize(memory_layout* current, u64 stride);
-        void* darray_push(memory_layout* current, u64 stride, u64 index, void* valuePtr);
-        void darray_pop(memory_layout* current, u64 stride, u64 index);
+        void* darray_resize(void* current, u64 newSize, u64 stride);
+        void* darray_push(void* current, u64 stride, u64 index, void* valuePtr);
+        void darray_pop(void* current, u64 stride, u64 index);
     }  // namespace internal
 
     template <typename T>
     class FB_API darray {
        public:
-        darray() : memory(nullptr) {}
+        darray() : elements(nullptr) {}
 
         darray(u64 capacity) {
-            memory = internal::darray_create(capacity, sizeof(T));
+            elements = (T*)internal::darray_create(capacity, sizeof(T));
         }
 
         ~darray() {
-            if (memory) {
-                internal::darray_destroy(memory, sizeof(T));
+            if (elements) {
+                internal::darray_destroy(elements, sizeof(T));
             }
         }
 
         darray(const darray<T>& other) {
-            if (other.memory) {
-                this->memory = internal::darray_copy(other.memory, sizeof(T));
+            if (other.elements) {
+                this->elements = (T*)internal::darray_copy(other.elements, sizeof(T));
             }
         }
 
         darray<T>& operator=(const darray<T>& other) {
-            if (other.memory) {
-                this->memory = internal::darray_copy(other.memory, sizeof(T));
+            if (other.elements) {
+                this->elements = (T*)internal::darray_copy(other.elements, sizeof(T));
             }
 
             return *this;
         }
 
         T& operator[](u64 index) {
-            T* elements = (T*)memory->elements;
             return elements[index];
         }
 
         u64 capacity() const {
-            if (!memory) {
+            if (!elements) {
                 return 0;
             }
-            return memory->capacity;
+            return *(u64*)((char*)elements - 2 * sizeof(u64));
         }
+
         u64 length() const {
-            if (!memory) {
+            if (!elements) {
                 return 0;
             }
-            return memory->length;
+            return *(u64*)((char*)elements - 1 * sizeof(u64));
         }
+
         u64 stride() const { return sizeof(T); }
+
         b8 empty() const {
-            return (!memory || memory->length == 0);
+            return (!elements || length() == 0);
         }
 
         void reserve(u64 newCapacity) {
-            memory = internal::darray_create(newCapacity, sizeof(T));
+            elements = (T*)internal::darray_create(newCapacity, sizeof(T));
         }
 
-        void resize() {
-            memory = internal::darray_resize(memory, sizeof(T));
+        void resize(u64 newSize) {
+            elements = (T*)internal::darray_resize(elements, newSize, sizeof(T));
         }
 
         const T& push(const T& value, u64 index = end_of_array) {
-            if (!memory) {
+            if (!elements) {
                 reserve(1);
             }
-            return *(T*)internal::darray_push(memory, sizeof(T), index, (void*)(&value));
+
+            elements = (T*)internal::darray_push(elements, sizeof(T), index, (void*)(&value));
+            return value;
         }
 
         void pop(u64 index = end_of_array) {
-            internal::darray_pop(memory, sizeof(T), index);
+            internal::darray_pop(elements, sizeof(T), index);
         }
 
         void clear() const {
-            if (!memory) {
+            if (!elements) {
                 return;
             }
-            memory->length = 0;
+            u64* length = (u64*)((char*)elements - 1 * sizeof(u64));
+            *length = 0;
         }
 
-        T* data() { return (T*)memory->elements; }
+        T* data() { return elements; }
 
        private:
-        internal::memory_layout* memory;
+           T* elements;
 
        private:
         static constexpr u64 end_of_array = invalid_u64;
