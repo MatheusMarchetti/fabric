@@ -1,6 +1,6 @@
 #include "renderer/d3d12/backend_d3d12.hpp"
 #include "renderer/d3d12/d3d12_common.hpp"
-#include "renderer/d3d12/d3d12_device.hpp"
+#include "renderer/d3d12/d3d12_context.hpp"
 #include "renderer/d3d12/d3d12_command_queue.hpp"
 #include "renderer/d3d12/dxgi_swapchain.hpp"
 #include "core/engine.hpp"
@@ -44,7 +44,7 @@ b8 d3d12_initialize(void* state) {
 
     HRCheck(CreateDXGIFactory2(flags, IID_PPV_ARGS(&factory)));
 
-    if(!d3d12_device::create(factory)) {
+    if(!d3d12_context::create(factory)) {
         FBERROR("An error ocurred during D3D12 device creation.");
         factory->Release();
         return false;
@@ -74,7 +74,7 @@ void d3d12_terminate() {
     graphics_queue.destroy();
 
     dxgi_swapchain::destroy();
-    d3d12_device::destroy();
+    d3d12_context::destroy();
 }
 
 void d3d12_begin_frame() {

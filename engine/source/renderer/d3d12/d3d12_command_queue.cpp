@@ -1,5 +1,5 @@
 #include "renderer/d3d12/d3d12_command_queue.hpp"
-#include "renderer/d3d12/d3d12_device.hpp"
+#include "renderer/d3d12/d3d12_context.hpp"
 #include "core/memory.hpp"
 
 using namespace fabric;
@@ -11,7 +11,7 @@ void d3d12_command_queue::create(D3D12_COMMAND_LIST_TYPE type) {
         .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
         .NodeMask = 0};
 
-    auto device = d3d12_device::get_logical_device();
+    auto device = d3d12_context::get_logical_device();
 
     HRCheck(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue)));
     HRCheck(device->CreateFence(last_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
