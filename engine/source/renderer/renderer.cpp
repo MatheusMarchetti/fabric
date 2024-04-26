@@ -2,7 +2,7 @@
 #include "core/logger.hpp"
 
 // TODO: Move to separate library and load dynamically
-#include "renderer/d3d12/backend_d3d12.hpp"
+#include "renderer/d3d12/d3d12_backend.hpp"
 
 using namespace fabric;
 
@@ -25,22 +25,22 @@ namespace {
         present_pfn present;
     };
 
-    static renderer_backend backend;
+    static renderer_backend loaded_backend;
 }  // namespace
 
 b8 renderer::initialize(platform::window& window) {
     // TODO: API backends should be separated in multiple dynamic libraries. This is where they would be loaded and their methods assigned
     //       to the common interface declared in renderer_backend
 
-    backend.initialize = d3d12_initialize;
-    backend.terminate = d3d12_terminate;
-    backend.begin_frame = d3d12_begin_frame;
-    backend.end_frame = d3d12_end_frame;
-    backend.resize = d3d12_resize;
-    backend.update = d3d12_update;
-    backend.present = d3d12_present;
+    loaded_backend.initialize = d3d12_initialize;
+    loaded_backend.terminate = d3d12_terminate;
+    loaded_backend.begin_frame = d3d12_begin_frame;
+    loaded_backend.end_frame = d3d12_end_frame;
+    loaded_backend.resize = d3d12_resize;
+    loaded_backend.update = d3d12_update;
+    loaded_backend.present = d3d12_present;
 
-    if(!backend.initialize(&window)) {
+    if(!loaded_backend.initialize(&window)) {
         return false;
     }
 
@@ -50,19 +50,19 @@ b8 renderer::initialize(platform::window& window) {
 }
 
 void renderer::terminate() {
-    backend.terminate();
+    loaded_backend.terminate();
 }
 
 void renderer::resize(u16 width, u16 height) {
-    backend.resize(width, height);
+    loaded_backend.resize(width, height);
 }
 
 b8 renderer::draw_frame(f64 timestep) {
-    backend.begin_frame();
+    loaded_backend.begin_frame();
 
-    backend.update(timestep);
+    loaded_backend.update(timestep);
 
-    backend.end_frame();
+    loaded_backend.end_frame();
 
-    return backend.present();
+    return loaded_backend.present();
 }

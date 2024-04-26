@@ -8,11 +8,13 @@ namespace fabric {
         u64 offset;
         u64 descriptor_handle;
     };
-    
+
     class d3d12_descriptor_allocator {
        public:
         void create(D3D12_DESCRIPTOR_HEAP_TYPE type);
         void destroy();
+
+        ID3D12DescriptorHeap* get_heap() { return descriptor_heap; }
 
         descriptor_allocation allocate(u64 count = 1);
 

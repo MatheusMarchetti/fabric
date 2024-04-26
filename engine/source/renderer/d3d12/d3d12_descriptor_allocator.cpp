@@ -1,5 +1,5 @@
 #include "renderer/d3d12/d3d12_descriptor_allocator.hpp"
-#include "renderer/d3d12/d3d12_context.hpp"
+#include "renderer/d3d12/d3d12_device.hpp"
 
 using namespace fabric;
 
@@ -14,7 +14,7 @@ void d3d12_descriptor_allocator::create(D3D12_DESCRIPTOR_HEAP_TYPE type) {
         .Flags = flags,
         .NodeMask = 0};
 
-    auto device = d3d12_context::get_logical_device();
+    auto device = d3d12_device::get_logical_device();
     HRCheck(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(&descriptor_heap)));
 
     switch (type) {
@@ -42,7 +42,7 @@ void d3d12_descriptor_allocator::destroy() {
 }
 
 descriptor_allocation d3d12_descriptor_allocator::allocate(u64 count) {
-    auto device = d3d12_context::get_logical_device();
+    auto device = d3d12_device::get_logical_device();
     D3D12_DESCRIPTOR_HEAP_DESC desc = descriptor_heap->GetDesc();
 
     u64 descriptor_size = device->GetDescriptorHandleIncrementSize(desc.Type);

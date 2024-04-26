@@ -1,5 +1,5 @@
 #include "renderer/d3d12/dxgi_swapchain.hpp"
-#include "renderer/d3d12/d3d12_context.hpp"
+#include "renderer/d3d12/d3d12_backend.hpp"
 #include "renderer/resources.hpp"
 
 #include "core/logger.hpp"
@@ -59,7 +59,7 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
         HRCheck(swapchain->GetBuffer(image_index, IID_PPV_ARGS(&buffer)));
         // TODO: Name the swapchain images with their indices
 
-        swapchain_images[image_index] = d3d12_context::create_render_target(buffer, rtv_desc);
+        swapchain_images[image_index] = backend::create_render_target(buffer, rtv_desc);
     }
 
     current_image_index = swapchain->GetCurrentBackBufferIndex();
