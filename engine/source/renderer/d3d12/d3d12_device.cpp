@@ -10,9 +10,6 @@ namespace {
     ID3D12Device10* logical_device;
 }  // namespace
 
-void CALLBACK d3d12_report_validation(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY, D3D12_MESSAGE_ID, LPCSTR, void*);
-static DWORD callback_cookie;
-
 b8 d3d12_device::create(IDXGIFactory7* dxgiFactory) {
     u8 i = 0;
     u8 best_adapter = 0;
@@ -75,53 +72,6 @@ b8 d3d12_device::create(IDXGIFactory7* dxgiFactory) {
 
     NAME_OBJECTS(logical_device);
 
-#ifdef _DEBUG
-    ID3D12InfoQueue1* info_queue;
-    if (SUCCEEDED(logical_device->QueryInterface(&info_queue))) {
-        D3D12_MESSAGE_ID deny[] =
-            {
-                D3D12_MESSAGE_ID_CREATE_COMMANDQUEUE,
-                D3D12_MESSAGE_ID_CREATE_COMMANDALLOCATOR,
-                D3D12_MESSAGE_ID_CREATE_PIPELINESTATE,
-                D3D12_MESSAGE_ID_CREATE_COMMANDLIST12,
-                D3D12_MESSAGE_ID_CREATE_RESOURCE,
-                D3D12_MESSAGE_ID_CREATE_DESCRIPTORHEAP,
-                D3D12_MESSAGE_ID_CREATE_ROOTSIGNATURE,
-                D3D12_MESSAGE_ID_CREATE_LIBRARY,
-                D3D12_MESSAGE_ID_CREATE_HEAP,
-                D3D12_MESSAGE_ID_CREATE_MONITOREDFENCE,
-                D3D12_MESSAGE_ID_CREATE_QUERYHEAP,
-                D3D12_MESSAGE_ID_CREATE_COMMANDSIGNATURE,
-                D3D12_MESSAGE_ID_CREATE_LIFETIMETRACKER,
-                D3D12_MESSAGE_ID_CREATE_SHADERCACHESESSION,
-                D3D12_MESSAGE_ID_DESTROY_COMMANDQUEUE,
-                D3D12_MESSAGE_ID_DESTROY_COMMANDALLOCATOR,
-                D3D12_MESSAGE_ID_DESTROY_PIPELINESTATE,
-                D3D12_MESSAGE_ID_DESTROY_COMMANDLIST12,
-                D3D12_MESSAGE_ID_DESTROY_RESOURCE,
-                D3D12_MESSAGE_ID_DESTROY_DESCRIPTORHEAP,
-                D3D12_MESSAGE_ID_DESTROY_ROOTSIGNATURE,
-                D3D12_MESSAGE_ID_DESTROY_LIBRARY,
-                D3D12_MESSAGE_ID_DESTROY_HEAP,
-                D3D12_MESSAGE_ID_DESTROY_MONITOREDFENCE,
-                D3D12_MESSAGE_ID_DESTROY_QUERYHEAP,
-                D3D12_MESSAGE_ID_DESTROY_COMMANDSIGNATURE,
-                D3D12_MESSAGE_ID_DESTROY_LIFETIMETRACKER,
-                D3D12_MESSAGE_ID_DESTROY_SHADERCACHESESSION};
-
-        D3D12_INFO_QUEUE_FILTER filter = {};
-        filter.DenyList.NumIDs = _countof(deny);
-        filter.DenyList.pIDList = deny;
-
-        HRCheck(info_queue->PushStorageFilter(&filter));
-        HRCheck(info_queue->RegisterMessageCallback(d3d12_report_validation, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &callback_cookie));
-        info_queue->Release();
-    } else {
-        FBERROR("An error ocurred while setting up D3D12 validation.");
-        return false;
-    }
-#endif
-
     return true;
 }
 
@@ -136,24 +86,4 @@ ID3D12Device10* d3d12_device::get_logical_device() {
 
 IDXGIAdapter4* get_physical_adapter() {
     return physical_adapter;
-}
-
-void CALLBACK d3d12_report_validation(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID messageID, LPCSTR message, void* context) {
-    switch (severity) {
-        case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-            FBFATAL(message);
-            break;
-        case D3D12_MESSAGE_SEVERITY_ERROR:
-            FBERROR(message);
-            break;
-        case D3D12_MESSAGE_SEVERITY_WARNING:
-            FBWARN(message);
-            break;
-        case D3D12_MESSAGE_SEVERITY_INFO:
-            FBINFO(message);
-            break;
-        case D3D12_MESSAGE_SEVERITY_MESSAGE:
-            FBDEBUG(message);
-            break;
-    }
 }

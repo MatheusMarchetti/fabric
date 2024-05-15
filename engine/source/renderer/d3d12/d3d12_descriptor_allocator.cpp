@@ -14,6 +14,8 @@ void d3d12_descriptor_allocator::create(D3D12_DESCRIPTOR_HEAP_TYPE type) {
         .Flags = flags,
         .NodeMask = 0};
 
+    heap_type = type;
+
     auto device = d3d12_device::get_logical_device();
     HRCheck(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(&descriptor_heap)));
 
@@ -34,6 +36,8 @@ void d3d12_descriptor_allocator::create(D3D12_DESCRIPTOR_HEAP_TYPE type) {
             break;
     }
 
+    descriptor_size = device->GetDescriptorHandleIncrementSize(type);
+
     descriptor_offset = 0;
 }
 
@@ -42,16 +46,15 @@ void d3d12_descriptor_allocator::destroy() {
 }
 
 descriptor_allocation d3d12_descriptor_allocator::allocate(u64 count) {
-    auto device = d3d12_device::get_logical_device();
-    D3D12_DESCRIPTOR_HEAP_DESC desc = descriptor_heap->GetDesc();
-
-    u64 descriptor_size = device->GetDescriptorHandleIncrementSize(desc.Type);
-
     descriptor_allocation allocation;
     allocation.offset = descriptor_offset;
-    allocation.descriptor_handle = descriptor_heap->GetCPUDescriptorHandleForHeapStart().ptr + descriptor_size * descriptor_offset;
+    allocation.cpu_handle = D3D12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart().ptr + descriptor_size * descriptor_offset);
 
     descriptor_offset += count;
 
     return allocation;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE d3d12_descriptor_allocator::get_cpu_handle(u32 descriptorOffset) {
+    return D3D12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart().ptr + descriptor_size * descriptorOffset);
 }

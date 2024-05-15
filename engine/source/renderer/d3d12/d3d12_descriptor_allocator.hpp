@@ -6,7 +6,7 @@
 namespace fabric {
     struct descriptor_allocation {
         u64 offset;
-        u64 descriptor_handle;
+        D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
     };
 
     class d3d12_descriptor_allocator {
@@ -18,8 +18,12 @@ namespace fabric {
 
         descriptor_allocation allocate(u64 count = 1);
 
+        D3D12_CPU_DESCRIPTOR_HANDLE get_cpu_handle(u32 descriptorOffset);
+
        private:
         ID3D12DescriptorHeap* descriptor_heap;
+        D3D12_DESCRIPTOR_HEAP_TYPE heap_type;
+        u64 descriptor_size;
         u64 descriptor_offset;
     };
 }  // namespace fabric

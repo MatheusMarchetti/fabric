@@ -1,5 +1,6 @@
 #include "renderer/d3d12/dxgi_swapchain.hpp"
 #include "renderer/d3d12/d3d12_backend.hpp"
+#include "renderer/d3d12/d3d12_command_list.hpp"
 #include "renderer/resources.hpp"
 
 #include "core/logger.hpp"
@@ -13,9 +14,14 @@ namespace {
     };
 
     IDXGISwapChain4* swapchain;
+    ID3D12Resource2* swapchain_resources[swapchain_image_count];
+    D3D12_RESOURCE_STATES resource_states[swapchain_image_count];
+
+    // TODO: Remove
     handle<texture> swapchain_images[swapchain_image_count];
 
     u8 current_image_index;
+    BOOL allowTearing = 0;
 }  // namespace
 
 void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* graphicsQueue, platform::window* window) {
@@ -24,8 +30,7 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
     hwnd = state->handle;
 
     IDXGISwapChain1* swapchain1;
-    BOOL allowTearing = 0;
-
+    
     HRCheck(dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)));
 
     DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
@@ -50,15 +55,16 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
     dxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
 
     D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
-        .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-        .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D
-    };
+        .Format = swapchain_desc.Format,
+        .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D};
 
     for (u8 image_index = 0; image_index < swapchain_image_count; image_index++) {
         ID3D12Resource2* buffer;
         HRCheck(swapchain->GetBuffer(image_index, IID_PPV_ARGS(&buffer)));
         // TODO: Name the swapchain images with their indices
 
+        swapchain_resources[image_index] = buffer;
+        resource_states[image_index] = D3D12_RESOURCE_STATE_PRESENT;
         swapchain_images[image_index] = backend::create_render_target(buffer, rtv_desc);
     }
 
@@ -66,6 +72,54 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
 }
 
 void dxgi_swapchain::destroy() {
+    for(u32 i = 0; i < swapchain_image_count; i++) {
+        swapchain_resources[i]->Release();
+    }
+
     swapchain->Release();
 }
 
+void dxgi_swapchain::begin_frame(const d3d12_command_list& cmdList) {
+    cmdList.transition_barrier(swapchain_resources[current_image_index], resource_states[current_image_index], D3D12_RESOURCE_STATE_RENDER_TARGET);
+    resource_states[current_image_index] = D3D12_RESOURCE_STATE_RENDER_TARGET;
+}
+
+void dxgi_swapchain::end_frame(const d3d12_command_list& cmdList) {
+    cmdList.transition_barrier(swapchain_resources[current_image_index], resource_states[current_image_index], D3D12_RESOURCE_STATE_PRESENT);
+    resource_states[current_image_index] = D3D12_RESOURCE_STATE_PRESENT;
+}
+
+b8 dxgi_swapchain::present(b8 vSync) {
+    HRESULT result = swapchain->Present(vSync, allowTearing ? DXGI_PRESENT_ALLOW_TEARING : 0);
+    current_image_index = swapchain->GetCurrentBackBufferIndex();
+
+    return result == S_OK;
+}
+
+void dxgi_swapchain::resize(u16 width, u16 height) {
+    for(u32 i = 0; i < swapchain_image_count; i++) {
+        swapchain_resources[i]->Release();
+    }
+    DXGI_SWAP_CHAIN_DESC1 desc;
+    HRCheck(swapchain->GetDesc1(&desc));
+    HRCheck(swapchain->ResizeBuffers(swapchain_image_count, width, height, desc.Format, desc.Flags));
+
+    current_image_index = swapchain->GetCurrentBackBufferIndex();
+
+        D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
+        .Format = desc.Format,
+        .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D};
+
+    for(u32 image_index = 0; image_index < swapchain_image_count; image_index++) {
+        ID3D12Resource2* buffer;
+        HRCheck(swapchain->GetBuffer(image_index,IID_PPV_ARGS(&buffer)));
+
+        swapchain_resources[image_index] = buffer;
+        resource_states[image_index] = D3D12_RESOURCE_STATE_PRESENT;
+        swapchain_images[image_index] = backend::create_render_target(swapchain_images[image_index], rtv_desc, buffer);
+    }
+}
+
+handle<texture> dxgi_swapchain::get_current_image() {
+    return swapchain_images[current_image_index];
+}
