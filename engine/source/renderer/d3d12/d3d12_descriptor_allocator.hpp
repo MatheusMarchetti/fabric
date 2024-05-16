@@ -1,14 +1,8 @@
 #pragma once
 
-#include "defines.hpp"
 #include "renderer/d3d12/d3d12_common.hpp"
 
 namespace fabric {
-    struct descriptor_allocation {
-        u64 offset;
-        D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
-    };
-
     class d3d12_descriptor_allocator {
        public:
         void create(D3D12_DESCRIPTOR_HEAP_TYPE type);

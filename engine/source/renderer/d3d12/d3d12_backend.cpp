@@ -1,9 +1,10 @@
 #include "renderer/d3d12/d3d12_backend.hpp"
 #include "renderer/d3d12/d3d12_command_queue.hpp"
 #include "renderer/d3d12/d3d12_command_list.hpp"
-#include "renderer/d3d12/d3d12_common.hpp"
 #include "renderer/d3d12/d3d12_descriptor_allocator.hpp"
 #include "renderer/d3d12/d3d12_device.hpp"
+#include "renderer/d3d12/d3d12_interface.hpp"
+#include "renderer/d3d12/d3d12_resource.hpp"
 #include "renderer/d3d12/dxgi_swapchain.hpp"
 #include "core/engine.hpp"
 #include "core/logger.hpp"
@@ -27,10 +28,16 @@ namespace {
     d3d12_command_queue transfer_queue;
 
     d3d12_command_list graphics_list;
+    d3d12_resource main_color;
+    descriptor_allocation main_color_rtv;
+    u32 main_color_index;
+    d3d12_resource main_depth;
+    descriptor_allocation main_depth_dsv;
+    u32 main_depth_index;
 
     d3d12_descriptor_allocator descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-    ftl::darray<backend::resource> renderer_resources;
+    ftl::darray<d3d12_resource> renderer_resources;
 }  // namespace
 
 void CALLBACK d3d12_report_validation(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY, D3D12_MESSAGE_ID, LPCSTR, void*);
@@ -124,11 +131,29 @@ b8 d3d12_initialize(void* state) {
     compute_queue.create(D3D12_COMMAND_LIST_TYPE_COMPUTE);
     transfer_queue.create(D3D12_COMMAND_LIST_TYPE_COPY);
 
-    graphics_list = graphics_queue.get_command_list();
-
     dxgi_swapchain::create(factory, graphics_queue.get_queue(), window);
 
     factory->Release();
+
+    graphics_list = graphics_queue.get_command_list();
+
+    main_color_index = renderer_resources.length();
+    main_color = backend::create_texture2D(current_width, current_height, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+
+    D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
+        .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+        .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D};
+
+    main_color_rtv = backend::create_render_target_view(main_color.get_resource(), rtv_desc);
+
+    main_depth_index = renderer_resources.length();
+    main_depth = backend::create_depth_stencil(current_width, current_height, false);
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {
+        .Format = DXGI_FORMAT_D32_FLOAT,
+        .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D};
+
+    main_depth_dsv = backend::create_depth_stencil_view(main_depth.get_resource(), dsv_desc);
 
     FBINFO("D3D12 renderer backend initialized.");
 
@@ -140,8 +165,11 @@ void d3d12_terminate() {
     compute_queue.destroy();
     graphics_queue.destroy();
 
-    for (u64 i = 0; i < renderer_resources.length(); i++) {
-        renderer_resources[i].resource->Release();
+    main_color = d3d12_resource();
+    main_depth = d3d12_resource();
+
+    for (u32 i = 0; i < renderer_resources.length(); i++) {
+        renderer_resources[i].release();
     }
 
     for (u8 i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; i++) {
@@ -156,21 +184,21 @@ void d3d12_begin_frame() {
     frame_index = (frame_index + 1) % frames_in_flight;
 
     graphics_queue.wait_for_value(graphics_fence_values[frame_index]);
-    // compute_queue.wait_for_value(compute_fence_values[frame_index]);
-    // transfer_queue.wait_for_value(transfer_fence_values[frame_index]);
+    compute_queue.wait_for_value(compute_fence_values[frame_index]);
+    transfer_queue.wait_for_value(transfer_fence_values[frame_index]);
 
-    dxgi_swapchain::begin_frame(graphics_list);
+    graphics_list.transition_barrier(&main_color, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    handle<texture> swapchain_buffer = dxgi_swapchain::get_current_image();
-    handle<texture> render_targets[] = {swapchain_buffer};
-    float clear_color[4] = {0.2f, 0.2f, 0.2f, 1.0f};
+    D3D12_CPU_DESCRIPTOR_HANDLE render_targets[] = {main_color_rtv.cpu_handle};
+    f32 clear_color[4] = {0.2f, 0.2f, 0.2f, 1.0f};
 
-    graphics_list.clear_render_target(dxgi_swapchain::get_current_image(), clear_color);
-    graphics_list.set_render_targets(render_targets, _countof(render_targets));
+    graphics_list.clear_render_target(main_color_rtv.cpu_handle, clear_color);
+    graphics_list.clear_depth_stencil(main_depth_dsv.cpu_handle, 1.0f, 0);
+    graphics_list.set_render_targets(render_targets, _countof(render_targets), &main_depth_dsv.cpu_handle);
 }
 
 void d3d12_end_frame() {
-    dxgi_swapchain::end_frame(graphics_list);
+    dxgi_swapchain::end_frame(graphics_list, main_color);
     graphics_list.submit();
 }
 
@@ -180,6 +208,30 @@ void d3d12_resize(u16 width, u16 height) {
     if (width != current_width || height != current_height) {
         current_width = width;
         current_height = height;
+
+        renderer_resources[main_color_index].release();
+        renderer_resources[main_depth_index].release();
+        renderer_resources.pop(main_color_index);
+        renderer_resources.pop(main_depth_index - 1);
+
+        main_color_index = renderer_resources.length();
+        main_color = backend::create_texture2D(current_width, current_height, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+
+        D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
+            .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+            .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D};
+
+        main_color_rtv = backend::create_render_target_view(main_color.get_resource(), rtv_desc, main_color_rtv.offset);
+
+        main_depth_index = renderer_resources.length();
+        main_depth = backend::create_depth_stencil(current_width, current_height, false);
+
+        D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {
+            .Format = DXGI_FORMAT_D32_FLOAT,
+            .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D};
+
+        main_depth_dsv = backend::create_depth_stencil_view(main_depth.get_resource(), dsv_desc, main_depth_dsv.offset);
+
         dxgi_swapchain::resize(width, height);
     }
 }
@@ -194,116 +246,112 @@ b8 d3d12_present() {
     return result;
 }
 
-d3d12_descriptor_allocator& backend::get_descriptor_allocator(D3D12_DESCRIPTOR_HEAP_TYPE type) {
-    return descriptor_allocators[type];
+const d3d12_resource& backend::create_texture2D(u16 width, u16 height, DXGI_FORMAT format, u8 mipLevels) {
+    D3D12_RESOURCE_DESC1 desc;
+    desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Format = format;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = mipLevels;
+    desc.Alignment = 0;
+    desc.DepthOrArraySize = 1;
+    desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.SampleDesc = {1, 0};
+    desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    desc.SamplerFeedbackMipRegion = {0, 0, 0};
+
+    D3D12_CLEAR_VALUE clear = {
+        .Format = format,
+        .Color = {0.2f, 0.2f, 0.2f, 1.0f}};
+
+    return renderer_resources.push(d3d12_resource(desc, &clear, D3D12_RESOURCE_STATE_COMMON, D3D12_HEAP_TYPE_DEFAULT));
 }
 
-backend::resource& backend::get_resource(u32 index) {
-    return renderer_resources[index];
+const d3d12_resource& backend::create_depth_stencil(u16 width, u16 height, b8 useStencil) {
+    D3D12_RESOURCE_DESC1 desc;
+    desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Format = useStencil ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_R32_TYPELESS;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.Alignment = 0;
+    desc.DepthOrArraySize = 1;
+    desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.SampleDesc = {1, 0};
+    desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | ((useStencil) ? D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE : D3D12_RESOURCE_FLAG_NONE);
+    desc.SamplerFeedbackMipRegion = {0, 0, 0};
+
+    D3D12_CLEAR_VALUE clear = {
+        .Format = useStencil ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_D32_FLOAT,
+        .DepthStencil = {
+            .Depth = 1.0f,
+            .Stencil = 0}};
+
+    return renderer_resources.push(d3d12_resource(desc, &clear, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_HEAP_TYPE_DEFAULT));
 }
 
-u32 backend::register_resource(ID3D12Resource2* resource, D3D12_RESOURCE_STATES state) {
-    renderer_resources.push({resource, state});
-    return renderer_resources.length() - 1;
-}
-
-handle<texture> backend::create_render_target(ID3D12Resource2* resource, D3D12_RENDER_TARGET_VIEW_DESC desc) {
+descriptor_allocation backend::create_render_target_view(ID3D12Resource2* resource, const D3D12_RENDER_TARGET_VIEW_DESC& desc, u32 offset) {
     auto device = d3d12_device::get_logical_device();
-    handle<texture> tex;
+    descriptor_allocation allocation;
 
-    descriptor_allocation allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
-
-    tex.render_target = allocation.offset;
-    tex.flags |= texture::flags::render_target;
+    if (offset != -1) {
+        allocation.offset = offset;
+        allocation.cpu_handle = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].get_cpu_handle(offset);
+    } else {
+        allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
+    }
 
     device->CreateRenderTargetView(resource, &desc, allocation.cpu_handle);
 
-    return tex;
+    return allocation;
 }
 
-handle<texture> backend::create_render_target(handle<texture> texture, D3D12_RENDER_TARGET_VIEW_DESC desc, ID3D12Resource2* resource) {
-    if(!resource) {
-        resource = renderer_resources[texture.index].resource;
-    }
+descriptor_allocation backend::create_depth_stencil_view(ID3D12Resource2* resource, const D3D12_DEPTH_STENCIL_VIEW_DESC& desc, u32 offset) {
     auto device = d3d12_device::get_logical_device();
+    descriptor_allocation allocation;
 
-    if (texture.flags & texture::flags::render_target) {
-        FBINFO("Recreating the render target view");
-
-        auto cpu_handle = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].get_cpu_handle(texture.render_target);
-        device->CreateRenderTargetView(resource, &desc, cpu_handle);
-
-        return texture;
+    if (offset != -1) {
+        allocation.offset = offset;
+        allocation.cpu_handle = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].get_cpu_handle(offset);
+    } else {
+        allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].allocate();
     }
-
-    descriptor_allocation allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
-
-    texture.render_target = allocation.offset;
-    texture.flags |= texture::flags::render_target;
-
-    device->CreateRenderTargetView(resource, &desc, allocation.cpu_handle);
-
-    return texture;
-}
-
-handle<texture> backend::create_depth_stencil(handle<texture> texture, D3D12_DEPTH_STENCIL_VIEW_DESC desc) {
-    auto resource = renderer_resources[texture.index].resource;
-    auto device = d3d12_device::get_logical_device();
-
-    if (texture.flags & texture::flags::depth_stencil) {
-        FBWARN("Trying to create a duplicate depth stencil view. Nothing is done.");
-
-        return texture;
-    }
-
-    descriptor_allocation allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].allocate();
-
-    texture.render_target = allocation.offset;
-    texture.flags |= texture::flags::depth_stencil;
 
     device->CreateDepthStencilView(resource, &desc, allocation.cpu_handle);
 
-    return texture;
+    return allocation;
 }
 
-handle<texture> backend::create_readonly_texture(handle<texture> texture, D3D12_SHADER_RESOURCE_VIEW_DESC desc) {
-    auto resource = renderer_resources[texture.index].resource;
+descriptor_allocation backend::create_readonly_texture_view(ID3D12Resource2* resource, const D3D12_SHADER_RESOURCE_VIEW_DESC& desc, u32 offset) {
     auto device = d3d12_device::get_logical_device();
+    descriptor_allocation allocation;
 
-    if (texture.flags & texture::flags::readonly) {
-        FBWARN("Trying to create a duplicate shader resource view. Nothing is done.");
-
-        return texture;
+    if (offset != -1) {
+        allocation.offset = offset;
+        allocation.cpu_handle = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].get_cpu_handle(offset);
+    } else {
+        allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
     }
-
-    descriptor_allocation allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
-
-    texture.render_target = allocation.offset;
-    texture.flags |= texture::flags::readonly;
 
     device->CreateShaderResourceView(resource, &desc, allocation.cpu_handle);
 
-    return texture;
+    return allocation;
 }
 
-handle<texture> backend::create_writable_texture(handle<texture> texture, D3D12_UNORDERED_ACCESS_VIEW_DESC desc) {
-    auto resource = renderer_resources[texture.index].resource;
+descriptor_allocation backend::create_writable_texture_view(ID3D12Resource2* resource, const D3D12_UNORDERED_ACCESS_VIEW_DESC& desc, u32 offset) {
     auto device = d3d12_device::get_logical_device();
+    descriptor_allocation allocation;
 
-    if (texture.flags & texture::flags::writable) {
-        FBWARN("Trying to create a duplicate unordered access view. Nothing is done.");
-
-        return texture;
+    if (offset != -1) {
+        allocation.offset = offset;
+        allocation.cpu_handle = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].get_cpu_handle(offset);
+    } else {
+        allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
     }
-
-    descriptor_allocation allocation = descriptor_allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
-
-    texture.render_target = allocation.offset;
-    texture.flags |= texture::flags::writable;
 
     device->CreateUnorderedAccessView(resource, nullptr, &desc, allocation.cpu_handle);
 
-    return texture;
+    return allocation;
 }
 
 void CALLBACK d3d12_report_validation(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID messageID, LPCSTR message, void* context) {

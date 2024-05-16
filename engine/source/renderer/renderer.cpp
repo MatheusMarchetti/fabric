@@ -2,7 +2,7 @@
 #include "core/logger.hpp"
 
 // TODO: Move to separate library and load dynamically
-#include "renderer/d3d12/d3d12_backend.hpp"
+#include "renderer/d3d12/d3d12_interface.hpp"
 
 using namespace fabric;
 

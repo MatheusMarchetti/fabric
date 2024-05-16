@@ -1,8 +1,6 @@
 #pragma once
 
-#include "defines.hpp"
 #include "renderer/d3d12/d3d12_common.hpp"
-#include "renderer/resources.hpp"
 
 namespace fabric {
     class d3d12_command_list {
@@ -17,12 +15,15 @@ namespace fabric {
         d3d12_command_list& operator=(d3d12_command_list&&) = delete;
         ~d3d12_command_list() = default;
 
-        void set_render_targets(handle<texture> renderTargets[], u32 count);
-        void clear_render_target(const handle<texture>& renderTarget, float color[4]);
+        void set_render_targets(D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[], u32 count, D3D12_CPU_DESCRIPTOR_HANDLE* depthStencil);
+        void clear_render_target(D3D12_CPU_DESCRIPTOR_HANDLE renderTarget, f32 color[4]);
+        void clear_depth_stencil(D3D12_CPU_DESCRIPTOR_HANDLE depthStencil, f32 depth, u8 stencil);
         void submit();
 
-        void transition_barrier(ID3D12Resource2* resource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState) const;
-        void transition_barriers(ID3D12Resource2* resources[], D3D12_RESOURCE_STATES beforeStates[], D3D12_RESOURCE_STATES afterStates[], u32 count) const;
+        void copy_resource(class d3d12_resource& source, class d3d12_resource& dest) const;
+
+        void transition_barrier(class d3d12_resource* resource, const D3D12_RESOURCE_STATES afterState) const;
+        void transition_barriers(class d3d12_resource* resources[], const D3D12_RESOURCE_STATES afterStates[], u32 count) const;
 
        private:
         ID3D12GraphicsCommandList7* get_command_list() { return command_list; }

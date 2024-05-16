@@ -1,8 +1,7 @@
 #include "renderer/d3d12/dxgi_swapchain.hpp"
 #include "renderer/d3d12/d3d12_backend.hpp"
 #include "renderer/d3d12/d3d12_command_list.hpp"
-#include "renderer/resources.hpp"
-
+#include "renderer/d3d12/d3d12_resource.hpp"
 #include "core/logger.hpp"
 
 using namespace fabric;
@@ -14,11 +13,8 @@ namespace {
     };
 
     IDXGISwapChain4* swapchain;
-    ID3D12Resource2* swapchain_resources[swapchain_image_count];
-    D3D12_RESOURCE_STATES resource_states[swapchain_image_count];
-
-    // TODO: Remove
-    handle<texture> swapchain_images[swapchain_image_count];
+    d3d12_resource swapchain_resources[swapchain_image_count];
+    descriptor_allocation swapchain_image_views[swapchain_image_count];
 
     u8 current_image_index;
     BOOL allowTearing = 0;
@@ -63,9 +59,8 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
         HRCheck(swapchain->GetBuffer(image_index, IID_PPV_ARGS(&buffer)));
         // TODO: Name the swapchain images with their indices
 
-        swapchain_resources[image_index] = buffer;
-        resource_states[image_index] = D3D12_RESOURCE_STATE_PRESENT;
-        swapchain_images[image_index] = backend::create_render_target(buffer, rtv_desc);
+        swapchain_resources[image_index] = d3d12_resource(buffer, D3D12_RESOURCE_STATE_PRESENT);
+        swapchain_image_views[image_index] = backend::create_render_target_view(buffer, rtv_desc);
     }
 
     current_image_index = swapchain->GetCurrentBackBufferIndex();
@@ -73,20 +68,18 @@ void dxgi_swapchain::create(IDXGIFactory7* dxgiFactory, ID3D12CommandQueue* grap
 
 void dxgi_swapchain::destroy() {
     for(u32 i = 0; i < swapchain_image_count; i++) {
-        swapchain_resources[i]->Release();
+        swapchain_resources[i].release();
     }
-
+    
     swapchain->Release();
 }
 
-void dxgi_swapchain::begin_frame(const d3d12_command_list& cmdList) {
-    cmdList.transition_barrier(swapchain_resources[current_image_index], resource_states[current_image_index], D3D12_RESOURCE_STATE_RENDER_TARGET);
-    resource_states[current_image_index] = D3D12_RESOURCE_STATE_RENDER_TARGET;
-}
-
-void dxgi_swapchain::end_frame(const d3d12_command_list& cmdList) {
-    cmdList.transition_barrier(swapchain_resources[current_image_index], resource_states[current_image_index], D3D12_RESOURCE_STATE_PRESENT);
-    resource_states[current_image_index] = D3D12_RESOURCE_STATE_PRESENT;
+void dxgi_swapchain::end_frame(const d3d12_command_list& cmdList, d3d12_resource& finalColor) {
+    d3d12_resource* resources[] = {&swapchain_resources[current_image_index], &finalColor };
+    const D3D12_RESOURCE_STATES after_states[] = {D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_SOURCE};
+    cmdList.transition_barriers(resources, after_states, _countof(resources));
+    cmdList.copy_resource(finalColor, swapchain_resources[current_image_index]);
+    cmdList.transition_barrier(&swapchain_resources[current_image_index], D3D12_RESOURCE_STATE_PRESENT);
 }
 
 b8 dxgi_swapchain::present(b8 vSync) {
@@ -98,7 +91,7 @@ b8 dxgi_swapchain::present(b8 vSync) {
 
 void dxgi_swapchain::resize(u16 width, u16 height) {
     for(u32 i = 0; i < swapchain_image_count; i++) {
-        swapchain_resources[i]->Release();
+        swapchain_resources[i].release();
     }
     DXGI_SWAP_CHAIN_DESC1 desc;
     HRCheck(swapchain->GetDesc1(&desc));
@@ -114,12 +107,7 @@ void dxgi_swapchain::resize(u16 width, u16 height) {
         ID3D12Resource2* buffer;
         HRCheck(swapchain->GetBuffer(image_index,IID_PPV_ARGS(&buffer)));
 
-        swapchain_resources[image_index] = buffer;
-        resource_states[image_index] = D3D12_RESOURCE_STATE_PRESENT;
-        swapchain_images[image_index] = backend::create_render_target(swapchain_images[image_index], rtv_desc, buffer);
+        swapchain_resources[image_index] = d3d12_resource(buffer, D3D12_RESOURCE_STATE_PRESENT);
+        swapchain_image_views[image_index] = backend::create_render_target_view(buffer, rtv_desc, swapchain_image_views[image_index].offset);
     }
-}
-
-handle<texture> dxgi_swapchain::get_current_image() {
-    return swapchain_images[current_image_index];
 }
