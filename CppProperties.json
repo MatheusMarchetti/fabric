@@ -15,7 +15,7 @@
         "UNICODE",
         "_UNICODE"
       ],
-      "intelliSenseMode": "windows-msvc-x64"
+      "intelliSenseMode": "windows-clang-x64"
     }
   ]
 }

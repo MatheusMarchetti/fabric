@@ -83,8 +83,8 @@ namespace fabric::event {
     b8 initialize();
     void terminate();
 
-    FB_API b8 checkin(u16 code, void* listener, on_event_pfn on_event);
-    FB_API b8 checkout(u16 code, void* listener, on_event_pfn on_event);
-    FB_API b8 send(u16 code, void* sender, context eventContext);
+    FBAPI b8 checkin(u16 code, void* listener, on_event_pfn on_event);
+    FBAPI b8 checkout(u16 code, void* listener, on_event_pfn on_event);
+    FBAPI b8 send(u16 code, void* sender, context eventContext);
 
 }  // namespace fabric::event

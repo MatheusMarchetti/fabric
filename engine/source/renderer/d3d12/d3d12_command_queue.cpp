@@ -1,19 +1,9 @@
 #include "renderer/d3d12/d3d12_command_queue.hpp"
 #include "renderer/d3d12/d3d12_device.hpp"
 #include "core/memory.hpp"
+#include "math/math.hpp"
 
 using namespace fabric;
-
-// TODO: Temporary (move to math library)
-namespace ftl {
-    u64 max(u64 val1, u64 val2) {
-        return (val1 > val2) ? val1 : val2;
-    }
-
-    u64 min(u64 val1, u64 val2) {
-        return (val1 < val2) ? val1 : val2;
-    }
-}  // namespace ftl
 
 void d3d12_command_queue::create(D3D12_COMMAND_LIST_TYPE type) {
     queue_type = type;

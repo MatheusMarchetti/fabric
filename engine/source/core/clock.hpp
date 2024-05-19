@@ -3,7 +3,7 @@
 #include "defines.hpp"
 
 namespace fabric::ftl {
-    class FB_API stopwatch {
+    class FBAPI stopwatch {
        public:
         stopwatch();
 

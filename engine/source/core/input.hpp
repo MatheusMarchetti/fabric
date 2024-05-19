@@ -149,22 +149,22 @@ namespace fabric::input {
     void update(f64 timestep);
 
     // Keyboard input
-    FB_API b8 is_key_down(keys key);
-    FB_API b8 is_key_up(keys key);
-    FB_API b8 was_key_down(keys key);
-    FB_API b8 was_key_up(keys key);
+    FBAPI b8 is_key_down(keys key);
+    FBAPI b8 is_key_up(keys key);
+    FBAPI b8 was_key_down(keys key);
+    FBAPI b8 was_key_up(keys key);
 
     void process_key(keys key, b8 pressed);
 
     // Mouse input
-    FB_API b8 is_button_down(buttons button);
-    FB_API b8 is_button_up(buttons button);
-    FB_API b8 was_button_down(buttons button);
-    FB_API b8 was_button_up(buttons button);
+    FBAPI b8 is_button_down(buttons button);
+    FBAPI b8 is_button_up(buttons button);
+    FBAPI b8 was_button_down(buttons button);
+    FBAPI b8 was_button_up(buttons button);
 
     // TODO: return vec2
-    FB_API void get_mouse_position(i32& x, i32& y);
-    FB_API void get_previous_mouse_position(i32& x, i32& y);
+    FBAPI void get_mouse_position(i32& x, i32& y);
+    FBAPI void get_previous_mouse_position(i32& x, i32& y);
 
     void process_button(buttons button, b8 pressed);
     void process_mouse_move(i16 x, i16 y);

@@ -49,14 +49,22 @@ static constexpr u64 invalid_u64 = -1ULL;
 
 #ifdef FBEXPORT
 #ifdef _MSC_VER
-#define FB_API _declspec(dllexport)
+#define FBAPI _declspec(dllexport)
 #else
-#define FB __attribute__((visibility("default")))
+#define FBAPI __attribute__((visibility("default")))
 #endif
 #else
 #ifdef _MSC_VER
-#define FB_API _declspec(dllimport)
+#define FBAPI _declspec(dllimport)
 #else
-#define FB_API
+#define FBAPI
 #endif
+#endif
+
+#ifdef _MSC_VER
+#define FBINLINE __forceinline
+#define FBNOINLINE __declspec(noinline)
+#else
+#define FBINLINE static inline
+#define FBNOINLINE
 #endif

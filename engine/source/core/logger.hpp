@@ -23,7 +23,7 @@ namespace fabric::logger {
     b8 initialize();
     void terminate();
 
-    FB_API void log_output(fabric::logger::log_level level, const char* message, ...);
+    FBAPI void log_output(fabric::logger::log_level level, const char* message, ...);
 }  // namespace fabric::logger
 
 #define FBFATAL(message, ...) fabric::logger::log_output(fabric::logger::LOG_LEVEL_FATAL, message, ##__VA_ARGS__);

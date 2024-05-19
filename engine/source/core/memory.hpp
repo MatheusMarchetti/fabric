@@ -25,11 +25,11 @@ namespace fabric::memory {
     b8 initialize();
     void terminate();
 
-    FB_API void* fballocate(u64 size, memory_tag tag);
-    FB_API void fbfree(void* block, u64 size, memory_tag tag);
-    FB_API void* fbzero(void* block, u64 size);
-    FB_API void* fbcopy(void* dst, const void* src, u64 size);
-    FB_API void* fbset(void* dst, i32 value, u64 size);
+    FBAPI void* fballocate(u64 size, memory_tag tag);
+    FBAPI void fbfree(void* block, u64 size, memory_tag tag);
+    FBAPI void* fbzero(void* block, u64 size);
+    FBAPI void* fbcopy(void* dst, const void* src, u64 size);
+    FBAPI void* fbset(void* dst, i32 value, u64 size);
 
-    FB_API void log_memory_usage();
+    FBAPI void log_memory_usage();
 }  // namespace fabric::memory

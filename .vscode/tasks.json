@@ -45,6 +45,20 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "type": "shell",
+            "label": "Clean Everything",
+            "windows" : {
+                "command": "${workspaceFolder}/clean-all.bat",
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
         }
     ],
     "version": "2.0.0"

@@ -7,6 +7,7 @@
 #include "core/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer.hpp"
+#include "math/math.hpp"
 
 using namespace fabric;
 
@@ -218,3 +219,11 @@ b8 on_resize(u16 code, void* sender, void* listener_inst, event::context context
 
     return false;
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+    int _fltused = 0; // it should be a single underscore since the double one is the mangled name
+#ifdef __cplusplus
+}
+#endif

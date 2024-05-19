@@ -3,7 +3,7 @@
 #include "defines.hpp"
 
 namespace fabric::ftl {
-    class FB_API string {
+    class FBAPI string {
        public:
         string(u64 size = 0);
         string(char* str);

@@ -14,7 +14,7 @@ namespace ftl {
     }  // namespace internal
 
     template <typename T>
-    class FB_API darray {
+    class FBAPI darray {
        public:
         darray() : elements(nullptr) {}
 
