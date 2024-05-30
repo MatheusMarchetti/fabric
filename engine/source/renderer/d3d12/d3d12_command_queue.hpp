@@ -20,12 +20,9 @@ namespace fabric {
         void wait_for_value(u64 fenceValue);
         void wait_for_idle();
 
-        u64 submit(ID3D12CommandList* commandList);
-        void submit(d3d12_command_list commandLists[], u32 count);
+        u64 submit(d3d12_command_list* commandLists, u32 count);
 
         const d3d12_command_list get_command_list();
-
-        ID3D12CommandAllocator* recycle_allocator(ID3D12CommandAllocator* submittedAllocator, u64 submissionValue);
 
        private:
         struct allocator_submission {

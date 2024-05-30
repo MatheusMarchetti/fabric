@@ -75,11 +75,8 @@ void dxgi_swapchain::destroy() {
 }
 
 void dxgi_swapchain::end_frame(const d3d12_command_list& cmdList, d3d12_resource& finalColor) {
-    d3d12_resource* resources[] = {&swapchain_resources[current_image_index], &finalColor };
-    const D3D12_RESOURCE_STATES after_states[] = {D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_SOURCE};
-    cmdList.transition_barriers(resources, after_states, _countof(resources));
     cmdList.copy_resource(finalColor, swapchain_resources[current_image_index]);
-    cmdList.transition_barrier(&swapchain_resources[current_image_index], D3D12_RESOURCE_STATE_PRESENT);
+    cmdList.present(swapchain_resources[current_image_index]);
 }
 
 b8 dxgi_swapchain::present(b8 vSync) {
@@ -108,6 +105,6 @@ void dxgi_swapchain::resize(u16 width, u16 height) {
         HRCheck(swapchain->GetBuffer(image_index,IID_PPV_ARGS(&buffer)));
 
         swapchain_resources[image_index] = d3d12_resource(buffer, D3D12_RESOURCE_STATE_PRESENT);
-        swapchain_image_views[image_index] = backend::create_render_target_view(buffer, rtv_desc, swapchain_image_views[image_index].offset);
+        swapchain_image_views[image_index] = backend::create_render_target_view(buffer, rtv_desc, swapchain_image_views[image_index].cpu_handle);
     }
 }

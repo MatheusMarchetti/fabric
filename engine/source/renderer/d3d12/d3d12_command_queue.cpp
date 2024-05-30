@@ -20,11 +20,6 @@ void d3d12_command_queue::create(D3D12_COMMAND_LIST_TYPE type) {
     HRCheck(device->CreateFence(last_completed_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
     fence->Signal(last_completed_fence_value);
 
-    ID3D12CommandAllocator* allocator;
-    HRCheck(device->CreateCommandAllocator(queue_type, IID_PPV_ARGS(&allocator)));
-    allocator_pool.push(allocator);
-    available_allocators.push(allocator);
-
     switch (type) {
         case D3D12_COMMAND_LIST_TYPE_DIRECT:
             NAME_OBJECTS_TYPE(command_queue, graphics_queue);
@@ -99,14 +94,7 @@ void d3d12_command_queue::wait_for_idle() {
     wait_for_value(next_fence_value - 1);
 }
 
-u64 d3d12_command_queue::submit(ID3D12CommandList* commandList) {
-    ID3D12CommandList* command_lists[] = {commandList};
-    command_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
-
-    return signal();
-}
-
-void d3d12_command_queue::submit(d3d12_command_list commandLists[], u32 count) {
+u64 d3d12_command_queue::submit(d3d12_command_list* commandLists, u32 count) {
     ftl::darray<ID3D12CommandList*> command_lists(count);
 
     for (u32 i = 0; i < count; i++) {
@@ -131,6 +119,8 @@ void d3d12_command_queue::submit(d3d12_command_list commandLists[], u32 count) {
 
         commandLists[i].reset();
     }
+
+    return submission_value;
 }
 
 const d3d12_command_list d3d12_command_queue::get_command_list() {
@@ -156,22 +146,6 @@ const d3d12_command_list d3d12_command_queue::get_command_list() {
     }
 
     return d3d12_command_list(command_list, allocator, this);
-}
-
-ID3D12CommandAllocator* d3d12_command_queue::recycle_allocator(ID3D12CommandAllocator* submittedAllocator, u64 submissionValue) {
-    allocator_submission submission{
-        .allocator = submittedAllocator,
-        .submission_value = submissionValue};
-
-    submitted_allocators.push(submission);
-    if (!available_allocators.empty()) {
-        ID3D12CommandAllocator* allocator = available_allocators[available_allocators.length() - 1];
-        available_allocators.pop();
-
-        return allocator;
-    }
-
-    return create_command_allocator();
 }
 
 ID3D12CommandAllocator* d3d12_command_queue::create_command_allocator() {

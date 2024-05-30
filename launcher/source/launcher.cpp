@@ -3,7 +3,7 @@
 using namespace fabric;
 
 bool launcher_initialize() {
-    FBDEBUG("Initializing launcher application");
+    FBDEBUG("Initializing launcher application.");
 
     memory::log_memory_usage();
     return true;
@@ -14,5 +14,5 @@ bool begin_frame(double timestep) {
 }
 
 void launcher_terminate() {
-    FBDEBUG("Terminating launcher application");
+    FBDEBUG("Terminating launcher application.");
 }

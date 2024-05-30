@@ -30,7 +30,7 @@ f32 ftl::fbabs(f32 x) {
     return fabsf(x);
 }
 
-i32 ftl::fbrandom(u32 seed, i32 min, i32 max) {
+i32 ftl::internal::fbrandom(u32 seed, i32 min, i32 max) {
     u32 rng_seed = seed;
     if (seed == -1) {
         rng_seed = (u32)platform::get_absolute_time();
@@ -44,12 +44,12 @@ i32 ftl::fbrandom(u32 seed, i32 min, i32 max) {
     return rand();
 }
 
-f32 ftl::fbrandom(u32 seed, f32 min, f32 max) {
+f32 ftl::internal::fbrandom(u32 seed, f32 min, f32 max) {
     if ((max - min) > FB_FLOAT_EPSILON) {
-        return min + ((f32)fbrandom(seed, (i32)min, (i32)max) / ((f32)RAND_MAX / (max - min)));
+        return min + ((f32)ftl::internal::fbrandom(seed, (i32)min, (i32)max) / ((f32)RAND_MAX / (max - min)));
     }
 
-    return (f32)fbrandom(seed, (i32)min, (i32)max) / (f32)RAND_MAX;
+    return (f32)ftl::internal::fbrandom(seed, (i32)min, (i32)max) / (f32)RAND_MAX;
 }
 
 u64 ftl::max(u64 val1, u64 val2) {

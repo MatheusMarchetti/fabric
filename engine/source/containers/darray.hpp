@@ -74,13 +74,13 @@ namespace ftl {
             elements = (T*)internal::darray_resize(elements, newSize, sizeof(T));
         }
 
-        const T& push(const T& value, u64 index = end_of_array) {
+        T& push(const T& value, u64 index = end_of_array) {
             if (!elements) {
                 reserve(1);
             }
 
             elements = (T*)internal::darray_push(elements, sizeof(T), index, (void*)(&value));
-            return value;
+            return elements[index != end_of_array ? index : length() - 1];
         }
 
         void pop(u64 index = end_of_array) {

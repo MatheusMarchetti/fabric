@@ -46,12 +46,14 @@ namespace ftl {
         return (value != 0) && ((value & (value - 1)) == 0);
     }
 
-    i32 fbrandom(u32 seed, i32 min, i32 max);
-    f32 fbrandom(u32 seed, f32 min, f32 max);
+    namespace internal {
+        i32 fbrandom(u32 seed, i32 min, i32 max);
+        f32 fbrandom(u32 seed, f32 min, f32 max);
+    }  // namespace internal
 
     template <typename T>
     FBAPI T fbrandom(u32 seed = -1, T min = 0, T max = 0) {
-        return fbrandom(seed, min, max);
+        return internal::fbrandom(seed, min, max);
     }
 
     FBAPI u64 max(u64 val1, u64 val2);
