@@ -4,104 +4,93 @@
 
 namespace ftl {
     namespace internal {
-        void* darray_create(u64 capacity, u64 stride);
-        void darray_destroy(void* memory, u64 stride);
-        void* darray_copy(void* original, u64 stride);
+        struct memory_layout {
+            u64 capacity = 0;
+            u64 length = 0;
+            void* block = nullptr;
+        };
 
-        void* darray_resize(void* current, u64 newSize, u64 stride);
-        void* darray_push(void* current, u64 stride, u64 index, void* valuePtr);
-        void darray_pop(void* current, u64 stride, u64 index);
+        void darray_create(memory_layout& layout, u64 capacity, u64 stride);
+        void darray_destroy(memory_layout& layout, u64 stride);
+        void darray_copy(memory_layout& src, memory_layout& dst, u64 stride);
+
+        void darray_resize(memory_layout& layout, u64 newSize, u64 stride);
+        void darray_push(memory_layout& layout, u64 stride, u64 index, void* valuePtr);
+        void darray_pop(memory_layout& layout, u64 stride, u64 index);
+
+        static constexpr u64 resize_factor = 2;
     }  // namespace internal
 
     template <typename T>
     class FBAPI darray {
        public:
-        darray() : elements(nullptr) {}
+        darray() = default;
 
         darray(u64 capacity) {
-            elements = (T*)internal::darray_create(capacity, sizeof(T));
+            internal::darray_create(memory, capacity, sizeof(T));
         }
 
         ~darray() {
-            if (elements) {
-                internal::darray_destroy(elements, sizeof(T));
-            }
+            internal::darray_destroy(memory, sizeof(T));
         }
 
         darray(const darray<T>& other) {
-            if (other.elements) {
-                this->elements = (T*)internal::darray_copy(other.elements, sizeof(T));
-            }
+            internal::darray_copy(other.memory, memory, sizeof(T));
         }
 
         darray<T>& operator=(const darray<T>& other) {
-            if (other.elements) {
-                this->elements = (T*)internal::darray_copy(other.elements, sizeof(T));
-            }
+            internal::darray_copy(other.memory, memory, sizeof(T));
 
             return *this;
         }
 
         T& operator[](u64 index) {
-            return elements[index];
+            T* block = (T*)memory.block;
+            return block[index];
         }
 
         u64 capacity() const {
-            if (!elements) {
-                return 0;
-            }
-            return *(u64*)((char*)elements - 2 * sizeof(u64));
+            return memory.capacity;
         }
 
         u64 length() const {
-            if (!elements) {
-                return 0;
-            }
-            return *(u64*)((char*)elements - 1 * sizeof(u64));
+            return memory.length;
         }
 
         u64 stride() const { return sizeof(T); }
 
         b8 empty() const {
-            return (!elements || length() == 0);
+            return memory.length == 0;
         }
 
         void reserve(u64 newCapacity) {
-            elements = (T*)internal::darray_create(newCapacity, sizeof(T));
+            internal::darray_create(memory, newCapacity, sizeof(T));
         }
 
         void resize(u64 newSize) {
-            elements = (T*)internal::darray_resize(elements, newSize, sizeof(T));
+            internal::darray_resize(memory, newSize, sizeof(T));
         }
 
         T& push(const T& value, u64 index = end_of_array) {
-            if (!elements) {
-                reserve(1);
-            }
-
-            elements = (T*)internal::darray_push(elements, sizeof(T), index, (void*)(&value));
-            return elements[index != end_of_array ? index : length() - 1];
+            internal::darray_push(memory, sizeof(T), index, (void*)(&value));
+            T* block = (T*)memory.block;
+            return block[index != end_of_array ? index : length() - 1];
         }
 
         void pop(u64 index = end_of_array) {
-            internal::darray_pop(elements, sizeof(T), index);
+            internal::darray_pop(memory, sizeof(T), index);
         }
 
-        void clear() const {
-            if (!elements) {
-                return;
-            }
-            u64* length = (u64*)((char*)elements - 1 * sizeof(u64));
-            *length = 0;
+        void clear() {
+            memory.length = 0;
         }
 
-        T* data() { return elements; }
+        T* data() { return (T*)memory.block; }
 
        private:
-           T* elements;
+        internal::memory_layout memory;
 
        private:
         static constexpr u64 end_of_array = invalid_u64;
-        static constexpr u64 default_capacity = 1;
     };
-}  // namespace fabric::ftl
+}  // namespace ftl

@@ -68,6 +68,3 @@ static constexpr u64 invalid_u64 = -1ULL;
 #define FBINLINE static inline
 #define FBNOINLINE
 #endif
-
-#undef min
-#undef max

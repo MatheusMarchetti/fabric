@@ -2,6 +2,9 @@
 
 #include "defines.hpp"
 
+#undef min
+#undef max
+
 // NOTE: Fabric uses a right handed coordinate system.
 //       +X points to the right, +Y points into the screen and +Z points up.
 //       Vectors and matrices are stored in row major order.

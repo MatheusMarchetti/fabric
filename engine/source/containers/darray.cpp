@@ -5,118 +5,82 @@
 using namespace fabric;
 using namespace ftl;
 
-namespace {
-    struct header {
-        u64 capacity;
-        u64 length;
-
-        static constexpr u64 header_size = 2 * sizeof(u64);
-    };
-
-    header* get_header(void* block) {
-        return (header*)((char*)block - header::header_size);
-    }
-
-    static constexpr u64 resize_factor = 2;
-}  // namespace
-
-void* internal::darray_create(u64 capacity, u64 stride) {
+void internal::darray_create(internal::memory_layout& layout, u64 capacity, u64 stride) {
     u64 array_size = capacity * stride;
-    header h = {
-        .capacity = capacity,
-        .length = 0
-    };
 
-    void* new_array = memory::fballocate(header::header_size + array_size, memory::MEMORY_TAG_DARRAY);
-
-    memory::fbcopy(new_array, &h, header::header_size);
-
-    return (void*)((char*)new_array + header::header_size);
+    layout.capacity = capacity;
+    layout.block = memory::fballocate(array_size, memory::MEMORY_TAG_DARRAY);
 }
 
-void internal::darray_destroy(void* memory, u64 stride) {
-    header* h = get_header(memory);
-    u64 total_size = header::header_size + h->capacity * stride;
-    memory::fbfree((void*)h, total_size, memory::MEMORY_TAG_DARRAY);
+void internal::darray_destroy(internal::memory_layout& layout, u64 stride) {
+    u64 array_size = layout.capacity * stride;
+    memory::fbfree(layout.block, array_size, memory::MEMORY_TAG_DARRAY);
+    layout.capacity = 0;
+    layout.length = 0;
 }
 
-void* internal::darray_copy(void* original, u64 stride) {
-    header* original_header = get_header(original);
-    void* new_array = internal::darray_create(original_header->capacity, stride);
+void internal::darray_copy(internal::memory_layout& src, internal::memory_layout& dst, u64 stride) {
+    internal::darray_create(dst, src.capacity, stride);
 
-    header* new_header = get_header(new_array);
-    new_header->capacity = original_header->capacity;
-    new_header->length = original_header->length;
-
-    memory::fbcopy(new_array, original, original_header->length * stride);
-
-    return new_array;
+    memory::fbcopy(dst.block, src.block, src.length * stride);
+    dst.length = src.length;
 }
 
-void* internal::darray_resize(void* current, u64 newSize, u64 stride) {
-    header* current_header = get_header(current);
-    u64 length = current_header->length;
+void internal::darray_resize(internal::memory_layout& layout, u64 newSize, u64 stride) {
+    internal::memory_layout temp;
+    internal::darray_create(temp, newSize, stride);
 
-    void* temp = internal::darray_create(newSize, stride);
+    temp.length = layout.length;
 
-    header* temp_header = get_header(temp);
-    temp_header->length = length;
+    memory::fbcopy(temp.block, layout.block, layout.length * stride);
 
-    memory::fbcopy(temp, current, length * stride);
+    internal::darray_destroy(layout, stride);
 
-    internal::darray_destroy(current, stride);
-    
-    return temp;
+    layout = temp;
 }
 
-void* internal::darray_push(void* current, u64 stride, u64 index, void* valuePtr) {
-    header* current_header = get_header(current);
-
-    if (index != invalid_u64 && index >= current_header->length) {
-        FBERROR("Index outside of the bounds of this array! Length: %i, index: %i", current_header->length, index);
-        return nullptr;
-    }
-
-    if (index == invalid_u64) {
-        index = current_header->length;
-    }
-
-    if (current_header->length >= current_header->capacity) {
-        current = internal::darray_resize(current, resize_factor * current_header->capacity, stride);
-        current_header = get_header(current);
-    }
-
-    u64 address = (u64)current;
-
-    if (current_header->length != 0 && index != current_header->length) {
-        memory::fbcopy((void*)(address + ((index + 1) * stride)), (void*)((char*)current + (index * stride)), stride * (current_header->length - index));
-    }
-
-    void* dest = (void*)(address + (index * stride));
-
-    //current->elements = memory::fbcopy((void*)(address + (index * stride)), valuePtr, stride);
-     memory::fbcopy(dest, valuePtr, stride);
-
-     current_header->length++;
-
-    return current;
-}
-
-void internal::darray_pop(void* current, u64 stride, u64 index) {
-    header* current_header = get_header(current);
-    if (index != invalid_u64 && index >= current_header->length) {
-        FBERROR("Index outside of the bounds of this array! Length: %i, index: %i", current_header->length, index);
+void internal::darray_push(internal::memory_layout& layout, u64 stride, u64 index, void* valuePtr) {
+    if (index != invalid_u64 && index >= layout.length) {
+        FBERROR("Index outside of the bounds of this array! Length: %i, index: %i", layout.length, index);
         return;
     }
 
     if (index == invalid_u64) {
-        index = current_header->length - 1;
+        index = layout.length;
     }
 
-    u64 address = (u64)current;
-    if (index != current_header->length - 1) {
-        memory::fbcopy((void*)(address + (index * stride)), (void*)(address + ((index + 1) * stride)), stride * (current_header->length - index));
+    if (layout.length >= layout.capacity) {
+        u64 capacity = layout.capacity == 0 ? 1 : layout.capacity;    
+        internal::darray_resize(layout, internal::resize_factor * capacity, stride);
     }
 
-    current_header->length--;
+    u64 address = (u64)layout.block;
+
+    if (layout.length != 0 && index != layout.length) {
+        memory::fbcopy((void*)(address + ((index + 1) * stride)), (void*)((char*)layout.block + (index * stride)), stride * (layout.length - index));
+    }
+
+    void* dest = (void*)(address + (index * stride));
+
+     memory::fbcopy(dest, valuePtr, stride);
+
+     layout.length++;
+}
+
+void internal::darray_pop(internal::memory_layout& layout, u64 stride, u64 index) {
+    if (index != invalid_u64 && index >= layout.length) {
+        FBERROR("Index outside of the bounds of this array! Length: %i, index: %i", layout.length, index);
+        return;
+    }
+
+    if (index == invalid_u64) {
+        index = layout.length - 1;
+    }
+
+    u64 address = (u64)layout.block;
+    if (index != layout.length - 1) {
+        memory::fbcopy((void*)(address + (index * stride)), (void*)(address + ((index + 1) * stride)), stride * (layout.length - index));
+    }
+
+    layout.length--;
 }
