@@ -4,7 +4,7 @@ OBJ_DIR := obj
 
 ASSEMBLY := launcher
 EXTENSION := .exe
-COMPILER_FLAGS := -g -std=c++20
+COMPILER_FLAGS := -g -std=c++20 -MD -fdeclspec
 INCLUDE_FLAGS := -Ilauncher/source -Iengine/source/ 
 LINKER_FLAGS := -g -lcore.lib -L$(OBJ_DIR)\engine -L$(BUILD_DIR)
 DEFINES := -D_DEBUG

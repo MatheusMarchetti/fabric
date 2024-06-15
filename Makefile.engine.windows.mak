@@ -4,7 +4,7 @@ OBJ_DIR := obj
 
 ASSEMBLY := core
 EXTENSION := .dll
-COMPILER_FLAGS := -g -Wvarargs -Wall -Werror -std=c++20
+COMPILER_FLAGS := -g -Wvarargs -Wall -Werror -std=c++20 -MD -fdeclspec
 INCLUDE_FLAGS := -Iengine/source
 LINKER_FLAGS := -g -shared -luser32 -ld3d12 -ldxgi -ldxguid -L$(OBJ_DIR)\engine
 DEFINES := -D_DEBUG -DFBEXPORT -D_CRT_SECURE_NO_WARNINGS

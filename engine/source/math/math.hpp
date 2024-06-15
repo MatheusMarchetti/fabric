@@ -85,6 +85,8 @@ namespace ftl {
         return d.length();
     }
 
+    /********** VEC2F **********/
+
     FBINLINE vec2f vec2_up() {
         return vec2f(0.0f, 1.0f);
     }
@@ -108,6 +110,8 @@ namespace ftl {
 
         return result;
     }
+
+    /********** VEC3F **********/
 
     FBINLINE vec3f vec3_up() {
         return vec3f(0.0f, 0.0f, 1.0f);
@@ -147,6 +151,8 @@ namespace ftl {
                      vec0.vec[2] * vec1.vec[0] - vec0.vec[0] * vec1.vec[2],
                      vec0.vec[0] * vec1.vec[1] - vec0.vec[1] * vec1.vec[0]);
     }
+
+    /********** VEC4F **********/
 
     FBINLINE f32 dot(const vec4f& vec0, const vec4f& vec1) {
         f32 result = 0.0f;

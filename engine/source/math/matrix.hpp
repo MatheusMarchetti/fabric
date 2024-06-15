@@ -6,9 +6,9 @@ struct mat3 {
                                 0.0f, diag, 0.0f,
                                 0.0f, 0.0f, diag} {}
 
-    mat3(vec3f r0, vec3f r1, vec3f r2) : mat{r0.x, r0.y, r0.z,
-                                             r1.x, r1.y, r1.z,
-                                             r2.x, r2.y, r2.z} {}
+    mat3(const vec3f& r0, const vec3f& r1, const vec3f& r2) : mat{r0.x, r0.y, r0.z,
+                                                                  r1.x, r1.y, r1.z,
+                                                                  r2.x, r2.y, r2.z} {}
 
     mat3 operator*(f32 scalar) {
         return mat3(row0 * scalar, row1 * scalar, row2 * scalar);
@@ -51,14 +51,28 @@ struct mat3 {
     }
 
     void inverse() {
-        mat3 result;
-
-        // TODO:
-
         f32* m = mat;
-        const f32* r = result.mat;
 
-        *m = *r;
+        mat3 result;
+        f32* o = result.mat;
+
+        o[0] = (m[4] * m[8] - m[5] * m[7]);
+        o[1] = (m[2] * m[7] - m[1] * m[8]);
+        o[2] = (m[1] * m[5] - m[2] * m[4]);
+
+        f32 d = 1.0f / (m[0] * o[0] + m[3] * o[1] + m[6] * o[2]);
+
+        o[0] = d * o[0];
+        o[1] = d * o[1];
+        o[2] = d * o[2];
+        o[3] = d * (m[5] * m[6] - m[3] * m[8]);
+        o[4] = d * (m[0] * m[8] - m[2] * m[6]);
+        o[5] = d * (m[2] * m[3] - m[0] * m[5]);
+        o[6] = d * (m[3] * m[7] - m[4] * m[6]);
+        o[7] = d * (m[1] * m[6] - m[0] * m[7]);
+        o[8] = d * (m[0] * m[4] - m[1] * m[3]);
+
+        *m = *o;
     }
 
     union {
@@ -187,6 +201,10 @@ struct mat4 {
         o[15] = d * ((t22 * m[10] + t16 * m[2] + t21 * m[6]) - (t20 * m[6] + t23 * m[10] + t17 * m[2]));
 
         *m = *o;
+    }
+
+    mat3 get_mat3() {
+        return mat3(row0.xyz, row1.xyz, row2.xyz);
     }
 
     union {
