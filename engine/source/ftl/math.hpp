@@ -62,7 +62,15 @@ namespace ftl {
     FBAPI u64 max(u64 val1, u64 val2);
     FBAPI u64 min(u64 val1, u64 val2);
 
-#include "math/vector.hpp"
+    FBINLINE f32 deg_to_rad(f32 degrees) {
+        return degrees * FB_DEG2RAD_MULTIPLIER;
+    }
+
+    FBINLINE f32 rad_to_deg(f32 radians) {
+        return radians * FB_RAD2DEG_MULTIPLIER;
+    }
+
+#include "ftl/vector.hpp"
 
     template <typename T>
     concept has_normalize = requires(T t) { t.normalize(); };
@@ -164,7 +172,7 @@ namespace ftl {
         return result;
     }
 
-#include "math/matrix.hpp"
+#include "ftl/matrix.hpp"
 
     template <typename T>
     concept has_inverse = requires(T t) { t.inverse(); };
@@ -362,7 +370,7 @@ namespace ftl {
         return result;
     }
 
-#include "math/quaternion.hpp"
+#include "ftl/quaternion.hpp"
 
     FBINLINE quat normalize(const quat& q) {
         quat result = q;
@@ -465,13 +473,4 @@ namespace ftl {
             (v0.z * s0) + (v1.z * s1),
             (v0.w * s0) + (v1.w * s1)};
     }
-
-    FBINLINE f32 deg_to_rad(f32 degrees) {
-        return degrees * FB_DEG2RAD_MULTIPLIER;
-    }
-
-    FBINLINE f32 rad_to_deg(f32 radians) {
-        return radians * FB_RAD2DEG_MULTIPLIER;
-    }
-
 }  // namespace ftl

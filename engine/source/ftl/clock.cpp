@@ -1,14 +1,15 @@
-#include "core/clock.hpp"
+#include "ftl/clock.hpp"
 #include "platform/platform.hpp"
 
 using namespace fabric;
+using namespace ftl;
 
-ftl::stopwatch::stopwatch() {
+stopwatch::stopwatch() {
     start_time = platform::get_absolute_time();
     elapsed = 0.0;
 }
 
-f64 ftl::stopwatch::mark() {
+f64 stopwatch::mark() {
     elapsed = platform::get_absolute_time() - start_time;
 
     return elapsed;
