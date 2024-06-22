@@ -42,3 +42,5 @@ clean: # clean build directory
 $(OBJ_DIR)/%.cpp.o: %.cpp # compile .cpp to .o object
 	@echo   $<...
 	@clang $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)
+
+-include $(OBJ_FILES:.o=.d)

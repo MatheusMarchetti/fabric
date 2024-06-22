@@ -61,10 +61,10 @@ static constexpr u64 invalid_u64 = -1ULL;
 #endif
 #endif
 
-#ifdef _MSC_VER
+#if defined(__clang__) || defined(__gcc__)
+#define FBINLINE __attribute__((always_inline)) inline
+#define FBNOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER_)
 #define FBINLINE __forceinline
 #define FBNOINLINE __declspec(noinline)
-#else
-#define FBINLINE static inline
-#define FBNOINLINE
 #endif

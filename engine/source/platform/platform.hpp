@@ -11,7 +11,7 @@ namespace fabric::platform {
         u16 height;
         void* internal_state;
     };
-    b8 initialize(fabric::platform::window& platformState);
+    b8 initialize(u64& memory_requirement, void* memory, fabric::platform::window& platformState);
     void terminate(fabric::platform::window& platformState);
 
     b8 update(fabric::platform::window& platformState);

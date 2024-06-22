@@ -1,7 +1,7 @@
 #include "renderer/d3d12/d3d12_command_queue.hpp"
 #include "renderer/d3d12/d3d12_device.hpp"
 #include "core/memory.hpp"
-#include "math/math.hpp"
+#include "ftl/math.hpp"
 
 using namespace fabric;
 

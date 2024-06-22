@@ -5,6 +5,8 @@
 #include "core/input.hpp"
 #include "core/logger.hpp"
 #include "core/event.hpp"
+#include "core/memory.hpp"
+#include "platform/filesystem.hpp"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -21,15 +23,32 @@ namespace {
         HWND hwnd;
     };
 
+    struct system_state {
+        internal_state internal_state;
+    };
+
+    static system_state* state;
     static f64 clock_frequency;
     static LARGE_INTEGER start_time;
 }  // namespace
 
 LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam);
 
-b8 platform::initialize(fabric::platform::window& platformState) {
-    platformState.internal_state = malloc(sizeof(internal_state));
-    internal_state* internal = (internal_state*)platformState.internal_state;
+b8 platform::initialize(u64& memory_requirement, void* memory, fabric::platform::window& platformState) {
+    memory_requirement = sizeof(system_state);
+    if (!memory) {
+        return true;
+    }
+
+    if (state) {
+        FBERROR("Platform system was already initialized!");
+        return false;
+    }
+    state = (system_state*)memory;
+    memory::fbzero(state, sizeof(system_state));
+
+    internal_state* internal = &state->internal_state;
+    platformState.internal_state = internal;
 
     internal->hinstance = GetModuleHandleA(0);
 
@@ -99,6 +118,8 @@ void platform::terminate(fabric::platform::window& platformState) {
         DestroyWindow(internal->hwnd);
         internal->hwnd = nullptr;
     }
+
+    state = nullptr;
 }
 
 b8 platform::update(fabric::platform::window& platformState) {
@@ -162,6 +183,11 @@ void platform::sleep(u64 ms) {
     Sleep(ms);
 }
 
+b8 filesystem::file::exists(const char* path) {
+    DWORD attribs = GetFileAttributesA(path);
+    return (attribs != INVALID_FILE_ATTRIBUTES && !(attribs & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_ERASEBKGND:
@@ -197,8 +223,22 @@ LRESULT CALLBACK win32_process_message(HWND hWnd, u32 msg, WPARAM wParam, LPARAM
             b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             input::keys key = (input::keys)wParam;
 
+            b8 isExtended = (HIWORD(lParam) & KF_EXTENDED) == KF_EXTENDED;
+
+            if (wParam == VK_MENU) {
+                key = isExtended ? input::KEY_RALT : input::KEY_LALT;
+            } else if (wParam == VK_SHIFT) {
+                u32 leftShift = MapVirtualKey(VK_LSHIFT, MAPVK_VK_TO_VSC);
+                u32 scancode = ((lParam & (0xFF << 16)) >> 16);
+                key = scancode == leftShift ? input::KEY_LSHIFT : input::KEY_RSHIFT;
+            } else if (wParam == VK_CONTROL) {
+                key = isExtended ? input::KEY_RCONTROL : input::KEY_LCONTROL;
+            }
+
             input::process_key(key, pressed);
-        } break;
+
+            return 0;
+        }
 
         case WM_MOUSEMOVE: {
             i16 xPosition = GET_X_LPARAM(lParam);

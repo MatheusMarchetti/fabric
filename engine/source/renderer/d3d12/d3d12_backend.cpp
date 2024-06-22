@@ -9,7 +9,7 @@
 #include "core/engine.hpp"
 #include "core/logger.hpp"
 #include "core/memory.hpp"
-#include "containers/darray.hpp"
+#include "ftl/darray.hpp"
 #include "platform/platform.hpp"
 
 using namespace fabric;
