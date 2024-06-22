@@ -80,7 +80,7 @@ namespace fabric::event {
 typedef b8 (*on_event_pfn)(u16 code, void* sender, void* listenerInst, fabric::event::context data);
 
 namespace fabric::event {
-    b8 initialize();
+    b8 initialize(u64& memory_requirement, void* memory);
     void terminate();
 
     FBAPI b8 checkin(u16 code, void* listener, on_event_pfn on_event);

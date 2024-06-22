@@ -20,7 +20,7 @@ namespace fabric::logger {
         LOG_LEVEL_COUNT
     };
 
-    b8 initialize();
+    b8 initialize(u64& memory_requirement, void* memory);
     void terminate();
 
     FBAPI void log_output(fabric::logger::log_level level, const char* message, ...);

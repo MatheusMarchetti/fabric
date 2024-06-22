@@ -9,8 +9,9 @@
 using namespace fabric;
 
 namespace {
-    struct memory_stats {
-        u64 total_allocated;
+    struct system_state {
+        u64 total_allocated = 0;
+        u64 allocation_count = 0;
         u64 tagged_allocations[memory::MEMORY_TAG_COUNT];
     };
 
@@ -23,56 +24,66 @@ namespace {
         "BST        ",
         "STRING     ",
         "APPLICATION",
+        "LINEAR_ALLC",
         "JOB        ",
         "TEXTURE    ",
         "MAT_INST   ",
         "RENDERER   ",
         "SCENE      ",
-        "COMPONENT  ",
-        "OP_NEW     "};
+        "COMPONENT  "};
 
-    static memory_stats statistics;
-
-    b8 is_initialized = false;
+    static system_state* state;
 }  // namespace
 
-b8 memory::initialize() {
-    if (is_initialized) {
+b8 memory::initialize(u64& memory_requirement, void* memory) {
+    memory_requirement = sizeof(system_state);
+    if (!memory) {
+        return true;
+    }
+
+    if (state) {
         FBERROR("Memory system was already initialized!");
         return false;
     }
-    platform::zero_memory(&statistics, sizeof(memory_stats));
+    state = (system_state*)memory;
+    memory::fbzero(state, sizeof(system_state));
 
     FBINFO("Memory system initialized.");
 
-    return is_initialized = true;
+    return true;
 }
 
 void memory::terminate() {
-    is_initialized = false;
+    state = nullptr;
 }
 
 void* memory::fballocate(u64 size, memory::memory_tag tag) {
-    if (tag == memory::MEMORY_TAG_UNKNOWN) {
-        FBWARN("fballocate called using MEMORY_TAG_UNKNOWN. It's recommended for all allocations to be properly categorized");
-    }
+    if (state) {
+        if (tag == memory::MEMORY_TAG_UNKNOWN) {
+            FBWARN("memory::fballocate: Called using MEMORY_TAG_UNKNOWN. It's recommended for all allocations to be properly categorized");
+        }
 
-    statistics.total_allocated += size;
-    statistics.tagged_allocations[tag] += size;
+        state->total_allocated += size;
+        state->tagged_allocations[tag] += size;
+        state->allocation_count++;
+    }
 
     // TODO: Memory alignment
     void* block = platform::allocate_memory(size, false);
     platform::zero_memory(block, size);
+
     return block;
 }
 
 void memory::fbfree(void* block, u64 size, memory::memory_tag tag) {
-    if (tag == memory::MEMORY_TAG_UNKNOWN) {
-        FBWARN("fbfree called using MEMORY_TAG_UNKNOWN. It's recommended for all allocations to be properly categorized");
-    }
+    if(state) {
+        if (tag == memory::MEMORY_TAG_UNKNOWN) {
+            FBWARN("memory::fbfree: Called using MEMORY_TAG_UNKNOWN. It's recommended for all allocations to be properly categorized");
+        }
 
-    statistics.total_allocated -= size;
-    statistics.tagged_allocations[tag] -= size;
+        state->total_allocated -= size;
+        state->tagged_allocations[tag] -= size;
+    }
 
     // TODO: Memory alignment
     platform::free_memory(block, false);
@@ -103,19 +114,19 @@ void memory::log_memory_usage() {
         char unit[4] = "XiB";
         f32 amount = 1.0f;
 
-        if (statistics.tagged_allocations[i] >= gib) {
+        if (state->tagged_allocations[i] >= gib) {
             unit[0] = 'G';
-            amount = statistics.tagged_allocations[i] / (f32)gib;
-        } else if (statistics.tagged_allocations[i] >= mib) {
+            amount = state->tagged_allocations[i] / (f32)gib;
+        } else if (state->tagged_allocations[i] >= mib) {
             unit[0] = 'M';
-            amount = statistics.tagged_allocations[i] / (f32)mib;
-        } else if (statistics.tagged_allocations[i] >= kib) {
+            amount = state->tagged_allocations[i] / (f32)mib;
+        } else if (state->tagged_allocations[i] >= kib) {
             unit[0] = 'K';
-            amount = statistics.tagged_allocations[i] / (f32)kib;
+            amount = state->tagged_allocations[i] / (f32)kib;
         } else {
             unit[0] = 'B';
             unit[1] = 0;
-            amount = (f32)statistics.tagged_allocations[i];
+            amount = (f32)state->tagged_allocations[i];
         }
 
         i32 length = snprintf(buffer + offset, buffer_size, "   %s: %.2f%s\n", memory_tag_string[i], amount, unit);
@@ -125,20 +136,38 @@ void memory::log_memory_usage() {
     FBINFO(buffer);
 }
 
+u64 memory::get_memory_allocation_count() {
+    if (state) {
+        return state->allocation_count;
+    }
+
+    return 0;
+}
+
 void* operator new(u64 size) {
-    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
+    void* block = memory::fballocate(size + sizeof(u64), memory::MEMORY_TAG_UNKNOWN);
+    u64* b = (u64*)block;
+    *b = size;
+
+    return (void*)(b + 1);
 }
 
 void operator delete(void* block) noexcept {
-    // NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
-    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
+    void* b = (void*)((u64*)block - 1);
+    u64 size = *((u64*)b);
+    memory::fbfree(b, size, memory::MEMORY_TAG_UNKNOWN);
 }
 
 void* operator new[](u64 size) {
-    return memory::fballocate(size, memory::MEMORY_TAG_OPERATOR_NEW);
+    void* block = memory::fballocate(size + sizeof(u64), memory::MEMORY_TAG_UNKNOWN);
+    u64* b = (u64*)block;
+    *b = size;
+
+    return (void*)(b + 1);
 }
 
 void operator delete[](void* block) noexcept {
-    // NOTE: _msize() is Windows specific. I couldn't find a better way to figure out the size of a memory block, since operator delete doesn't have this information.
-    memory::fbfree(block, _msize(block), memory::MEMORY_TAG_OPERATOR_NEW);
+    void* b = (void*)((u64*)block - 1);
+    u64 size = *((u64*)b);
+    memory::fbfree(b, size, memory::MEMORY_TAG_UNKNOWN);
 }

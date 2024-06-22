@@ -1,5 +1,6 @@
 #include "renderer/renderer.hpp"
 #include "core/logger.hpp"
+#include "core/memory.hpp"
 
 // TODO: Move to separate library and load dynamically
 #include "renderer/d3d12/d3d12_interface.hpp"
@@ -15,7 +16,7 @@ namespace {
     typedef void(*update_pfn)(f64);
     typedef b8(*present_pfn)();
 
-    struct renderer_backend {
+    struct system_state {
         initialize_pfn initialize;
         terminate_pfn terminate;
         begin_frame_pfn begin_frame;
@@ -25,22 +26,34 @@ namespace {
         present_pfn present;
     };
 
-    static renderer_backend loaded_backend;
+    static system_state* state;
 }  // namespace
 
-b8 renderer::initialize(platform::window& window) {
+b8 renderer::initialize(u64& memory_requirement, void* memory, platform::window& window) {
+    memory_requirement = sizeof(system_state);
+    if(!memory) {
+        return true;
+    }
+
+    if (state) {
+        FBERROR("Renderer system was already initialized!");
+        return false;
+    }
+    state = (system_state*)memory;
+    memory::fbzero(state, sizeof(system_state));
+
     // TODO: API backends should be separated in multiple dynamic libraries. This is where they would be loaded and their methods assigned
     //       to the common interface declared in renderer_backend
 
-    loaded_backend.initialize = d3d12_initialize;
-    loaded_backend.terminate = d3d12_terminate;
-    loaded_backend.begin_frame = d3d12_begin_frame;
-    loaded_backend.end_frame = d3d12_end_frame;
-    loaded_backend.resize = d3d12_resize;
-    loaded_backend.update = d3d12_update;
-    loaded_backend.present = d3d12_present;
+    state->initialize = d3d12_initialize;
+    state->terminate = d3d12_terminate;
+    state->begin_frame = d3d12_begin_frame;
+    state->end_frame = d3d12_end_frame;
+    state->resize = d3d12_resize;
+    state->update = d3d12_update;
+    state->present = d3d12_present;
 
-    if(!loaded_backend.initialize(&window)) {
+    if(!state->initialize(&window)) {
         return false;
     }
 
@@ -50,19 +63,21 @@ b8 renderer::initialize(platform::window& window) {
 }
 
 void renderer::terminate() {
-    loaded_backend.terminate();
+    state->terminate();
+
+    state = nullptr;
 }
 
 void renderer::resize(u16 width, u16 height) {
-    loaded_backend.resize(width, height);
+    state->resize(width, height);
 }
 
 b8 renderer::draw_frame(f64 timestep) {
-    loaded_backend.begin_frame();
+    state->begin_frame();
 
-    loaded_backend.update(timestep);
+    state->update(timestep);
 
-    loaded_backend.end_frame();
+    state->end_frame();
 
-    return loaded_backend.present();
+    return state->present();
 }

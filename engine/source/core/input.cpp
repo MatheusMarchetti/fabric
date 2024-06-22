@@ -16,44 +16,48 @@ namespace {
         b8 buttons[input::buttons::BUTTON_MAX_COUNT];
     };
 
-    keyboard keyboard_current;
-    keyboard keyboard_previous;
-    mouse mouse_current;
-    mouse mouse_previous;
+    struct system_state {
+        keyboard keyboard_current;
+        keyboard keyboard_previous;
+        mouse mouse_current;
+        mouse mouse_previous;
+    };
 
-    b8 is_initialized = false;
+    static system_state* state;
 }  // namespace
 
-b8 input::initialize() {
-    if (is_initialized) {
+b8 input::initialize(u64& memory_requirement, void* memory) {
+    memory_requirement = sizeof(system_state);
+    if(!memory) {
+        return true;
+    }
+
+    if (state) {
         FBERROR("Input system was already initialized!");
         return false;
     }
-
-    memory::fbzero(&keyboard_current, sizeof(keyboard));
-    memory::fbzero(&keyboard_previous, sizeof(keyboard));
-    memory::fbzero(&mouse_current, sizeof(mouse));
-    memory::fbzero(&mouse_previous, sizeof(mouse));
+    state = (system_state*)memory;
+    memory::fbzero(state, sizeof(system_state));
 
     FBINFO("Input system initialized.");
 
-    return is_initialized = true;
+    return true;
 }
 
 void input::terminate() {
-    is_initialized = false;
+    state = nullptr;
 }
 
 void input::update(f64 timestep) {
-    if (is_initialized) {
-        memory::fbcopy(&keyboard_previous, &keyboard_current, sizeof(keyboard));
-        memory::fbcopy(&mouse_previous, &mouse_current, sizeof(mouse));
+    if (state) {
+        memory::fbcopy(&state->keyboard_previous, &state->keyboard_current, sizeof(keyboard));
+        memory::fbcopy(&state->mouse_previous, &state->mouse_current, sizeof(mouse));
     }
 }
 
 void input::process_key(keys key, b8 pressed) {
-    if (keyboard_current.keys[key] != pressed) {
-        keyboard_current.keys[key] = pressed;
+    if (state->keyboard_current.keys[key] != pressed) {
+        state->keyboard_current.keys[key] = pressed;
 
         event::context context;
         context.data.u16[0] = key;
@@ -63,8 +67,8 @@ void input::process_key(keys key, b8 pressed) {
 }
 
 void input::process_button(buttons button, b8 pressed) {
-    if (mouse_current.buttons[button] != pressed) {
-        mouse_current.buttons[button] = pressed;
+    if (state->mouse_current.buttons[button] != pressed) {
+        state->mouse_current.buttons[button] = pressed;
 
         event::context context;
         context.data.u16[0] = button;
@@ -74,9 +78,9 @@ void input::process_button(buttons button, b8 pressed) {
 }
 
 void input::process_mouse_move(i16 x, i16 y) {
-    if (mouse_current.x != x || mouse_current.y != y) {
-        mouse_current.x = x;
-        mouse_current.y = y;
+    if (state->mouse_current.x != x || state->mouse_current.y != y) {
+        state->mouse_current.x = x;
+        state->mouse_current.y = y;
 
         event::context context;
         context.data.u16[0] = x;
@@ -94,95 +98,95 @@ void input::process_mouse_wheel(i8 z_delta) {
 }
 
 b8 input::is_key_down(keys key) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return keyboard_current.keys[key] == true;
+    return state->keyboard_current.keys[key] == true;
 }
 
 b8 input::is_key_up(keys key) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return keyboard_current.keys[key] == false;
+    return state->keyboard_current.keys[key] == false;
 }
 
 b8 input::was_key_down(keys key) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return keyboard_previous.keys[key] == true;
+    return state->keyboard_previous.keys[key] == true;
 }
 
 b8 input::was_key_up(keys key) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return keyboard_previous.keys[key] == false;
+    return state->keyboard_previous.keys[key] == false;
 }
 
 b8 input::is_button_down(buttons button) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return mouse_current.buttons[button] == true;
+    return state->mouse_current.buttons[button] == true;
 }
 
 b8 input::is_button_up(buttons button) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return mouse_current.buttons[button] == false;
+    return state->mouse_current.buttons[button] == false;
 }
 
 b8 input::was_button_down(buttons button) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return mouse_previous.buttons[button] == true;
+    return state->mouse_previous.buttons[button] == true;
 }
 
 b8 input::was_button_up(buttons button) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         return false;
     }
 
-    return mouse_previous.buttons[button] == false;
+    return state->mouse_previous.buttons[button] == false;
 }
 
 void input::get_mouse_position(i32& x, i32& y) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         x = y = 0;
         return;
     }
 
-    x = mouse_current.x;
-    y = mouse_current.y;
+    x = state->mouse_current.x;
+    y = state->mouse_current.y;
 }
 
 void input::get_previous_mouse_position(i32& x, i32& y) {
-    if (!is_initialized) {
+    if (!state) {
         FBERROR("Trying to query for inputs before the input system was initialized.");
         x = y = 0;
         return;
     }
 
-    x = mouse_previous.x;
-    y = mouse_previous.y;
+    x = state->mouse_previous.x;
+    y = state->mouse_previous.y;
 }

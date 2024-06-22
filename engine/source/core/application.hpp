@@ -16,4 +16,5 @@ struct application {
     b8 (*begin_frame)(f64 timestep) = nullptr;
     b8 (*end_frame)(f64 timestep) = nullptr;
     void (*terminate)() = nullptr;
+    void* internal_state = nullptr;
 };

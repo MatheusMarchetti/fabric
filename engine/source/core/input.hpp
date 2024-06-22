@@ -129,8 +129,8 @@ namespace fabric::input {
         DEFINE_KEY(RSHIFT, 0xA1),
         DEFINE_KEY(LCONTROL, 0xA2),
         DEFINE_KEY(RCONTROL, 0xA3),
-        DEFINE_KEY(LMENU, 0xA4),
-        DEFINE_KEY(RMENU, 0xA5),
+        DEFINE_KEY(LALT, 0xA4),
+        DEFINE_KEY(RALT, 0xA5),
 
         DEFINE_KEY(SEMICOLON, 0xBA),
         DEFINE_KEY(PLUS, 0xBB),
@@ -143,7 +143,7 @@ namespace fabric::input {
         KEYS_MAX_COUNT
     };
 
-    b8 initialize();
+    b8 initialize(u64& memory_requirement, void* memory);
     void terminate();
 
     void update(f64 timestep);

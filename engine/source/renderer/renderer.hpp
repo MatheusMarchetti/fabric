@@ -4,7 +4,7 @@
 #include "platform/platform.hpp"
 
 namespace fabric::renderer {
-    b8 initialize(platform::window& window);
+    b8 initialize(u64& memory_requirement, void* memory, platform::window& window);
     void terminate();
 
     void resize(u16 width, u16 height);
